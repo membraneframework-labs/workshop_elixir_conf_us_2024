@@ -1,1 +1,152 @@
-# Untitled notebook
+# B: Style Transfer
+
+```elixir
+Logger.configure(level: :info)
+
+Mix.install([
+  :membrane_core,
+  :membrane_hackney_plugin,
+  :membrane_mp3_mad_plugin,
+  :membrane_portaudio_plugin,
+  {:membrane_webrtc_plugin, "~> 0.19.0"},
+  # {:membrane_style_transfer_plugin,
+  #  path: "/Users/feliks/membrane/membrane_style_transfer_plugin"},
+  {:membrane_camera_capture_plugin, "~> 0.7.2"},
+  {:membrane_h264_ffmpeg_plugin, "~> 0.31.6"},
+  {:membrane_h26x_plugin, "~> 0.10.2"},
+  {:membrane_sdl_plugin, "~> 0.18.2"},
+  # {:membrane_mp4_plugin, "~> 0.35.0"},
+  {:membrane_mp4_plugin, path: "/Users/feliks/membrane/membrane_mp4_plugin"},
+  {:membrane_file_plugin, "~> 0.17.0"},
+  {:membrane_matroska_plugin, "~> 0.5.1"},
+  # {:membrane_ffmpeg_swscale_plugin,
+  #  path: "/Users/feliks/membrane/membrane_ffmpeg_swscale_plugin"},
+  :membrane_realtimer_plugin,
+  {:kino, "~> 0.13.1"},
+  :membrane_opus_plugin
+])
+```
+
+## Models
+
+In `priv/models` directory we have a few models in `.onnx` format. Each of them does specyfic style tranfer of the input data.
+
+```bash
+$ ls priv/models
+candy.onnx		
+kaganawa.onnx		
+mosaic.onnx		
+mosaic_mobile.onnx	
+picasso.onnx		
+princess.onnx		
+udnie.onnx		
+vangogh.onnx
+```
+
+Each model expects `t:Nx.tensor()` that represents an image. Tensor shape should be `{batch_size, colors, height, width}`, where:
+
+* `batch_size` - number of images passed to the model at once (for us, it might be always equal `1`)
+* `colors` - always equal `3`, since in `RGB` each pixel is described by three numbers, for each color
+* `hegith` - image height (in other words, raw video frame height)
+* `width` - image width (in other words, raw video frame width)
+
+## Exercise B1: Write Style Transfer Element
+
+Write your own `StyleTransferFilter`, that will use one of the models above, to put style tranfer on our video clip with Big Buck Bunny.
+
+Then, add your element to the `StyleTransferPipeline` below this exercise.
+
+There are some tips, that will be helpfull:
+
+* to use a specific model, we have to load it first, using `Ortex.load/1` function ([Ortex docs](https://hexdocs.pm/ortex/Ortex.html)).
+* raw video frames returned by `SWScale.Converter{format: :RGB}` will have arrangement `H x W x colors`. Number representing one color of one pixel will take 1 byte and won't have a sign.
+* `stream_format` received in `handle_stream_format/4` will contain information about input video width and height
+* `t:Nx.tensor()` returned by a model needs to be clamped to the range between 0 and 255
+* always set the `t:Nx.tensor()` backend to `EXLA.Backend`, otherwise operations on tensors will be slow (take a look at `Nx.backend_transfer/2` function and `:backend` option in `Nx.from_binary/3`)
+* Our models expect two input tensors: one representing image, second one specifying parameters used in layers inside the models. Code snippet below illustrates, how to run a model with these two inputs. You can always run the model with the same parameters as in the example.
+  ```elixir
+  {output_tensor} = 
+  Ortex.run(loaded_model, {
+    preprocessed_image_tensor, 
+    Nx.tensor([1.0, 1.0, 1.0, 1.0], type: :f32)
+  })
+  ```
+
+```elixir
+defmodule StyleTransferFilter do
+  use Membrane.Filter
+
+  @impl true
+  def handle_init(_ctx, _opts), do: {[], %{}}
+
+  @impl true
+  def handle_setup(_ctx, state) do
+    # setup the element
+    {[], state}
+  end
+
+  # more callbacks 
+end
+```
+
+```elixir
+defmodule StyleTransferPipeline do
+  use Membrane.Pipeline
+
+  @impl true
+  def handle_init(_ctx, _options) do
+    input_path = "#{__DIR__}/priv/fixtures/clip_BigBuckBunny.mp4"
+    output_path = "#{__DIR__}/priv/outputs/style_transfer_bunny.mp4"
+
+    spec = [
+      child(:source, %Membrane.File.Source{location: input_path})
+      |> child(:mp4_demuxer, Membrane.MP4.Demuxer.ISOM)
+      |> via_out(:output, kind: :video)
+      |> child({:h264_parser, 1}, %Membrane.H264.Parser{output_stream_structure: :annexb})
+      |> child(:h264_decoder, Membrane.H264.FFmpeg.Decoder)
+      |> child(:rgb_converter, %Membrane.FFmpeg.SWScale.Converter{format: :RGB})
+      |> child(:style_transfer, StyleTransferFilter)
+      |> child(:yuv_converter, %Membrane.FFmpeg.SWScale.Converter{format: :I420})
+      |> child(:h264_encoder, %Membrane.H264.FFmpeg.Encoder{preset: :fast})
+      |> child({:h264_parser, 2}, %Membrane.H264.Parser{output_stream_structure: :avc1})
+      |> child(:mp4_muxer, Membrane.MP4.Muxer.ISOM)
+      |> child(:file_sink, %Membrane.File.Sink{location: output_path}),
+      get_child(:mp4_demuxer)
+      |> via_out(:output, kind: :audio)
+      |> get_child(:mp4_muxer)
+    ]
+
+    {[spec: spec], %{}}
+  end
+
+  @impl true
+  def handle_element_end_of_stream(:file_sink, _input, _ctx, state) do
+    {[terminate: :normal], state}
+  end
+
+  @impl true
+  def handle_element_end_of_stream(_element, _input, _ctx, state), do: {[], state}
+end
+```
+
+```elixir
+{:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(StyleTransferPipeline)
+ref = Process.monitor(supervisor)
+
+receive do
+  {:DOWN, ^ref, _process, _pid, reason} -> reason
+end
+```
+
+## Exercise B2: Compose models
+
+Try to compose 2 style transfers. You can do it in any way you want.
+
+Which approach to this problem is the simplest to implement? Is it the most efficient one?
+
+## Exercise B3: Rotate styles
+
+Now, let's introduce following changes to your StyleTransferFilter:
+
+* load all models in handle_setup
+* every 1.5 seconds change the used model, so that the style of the output video changes

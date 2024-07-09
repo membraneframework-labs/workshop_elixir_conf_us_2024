@@ -1,1 +1,195 @@
-# Untitled notebook
+# C: Live Processing
+
+```elixir
+Logger.configure(level: :info)
+
+Mix.install([
+  :membrane_core,
+  :membrane_hackney_plugin,
+  :membrane_mp3_mad_plugin,
+  :membrane_portaudio_plugin,
+  {:membrane_webrtc_plugin, "~> 0.19.0"},
+  # {:membrane_style_transfer_plugin,
+  #  path: "/Users/feliks/membrane/membrane_style_transfer_plugin"},
+  {:membrane_camera_capture_plugin, "~> 0.7.2"},
+  {:membrane_h264_ffmpeg_plugin, "~> 0.31.6"},
+  {:membrane_h26x_plugin, "~> 0.10.2"},
+  {:membrane_sdl_plugin, "~> 0.18.2"},
+  # {:membrane_mp4_plugin, "~> 0.35.0"},
+  {:membrane_mp4_plugin, path: "/Users/feliks/membrane/membrane_mp4_plugin"},
+  {:membrane_file_plugin, "~> 0.17.0"},
+  {:membrane_matroska_plugin, "~> 0.5.1"},
+  # {:membrane_ffmpeg_swscale_plugin,
+  #  path: "/Users/feliks/membrane/membrane_ffmpeg_swscale_plugin"},
+  :membrane_realtimer_plugin,
+  {:kino, "~> 0.13.1"},
+  :membrane_opus_plugin
+])
+```
+
+## WebRTCPipeline
+
+The pipeline below gets the audio and video from the browser and resends it back.
+
+```elixir
+defmodule WebRTCPipeline do
+  use Membrane.Pipeline
+
+  alias Membrane.WebRTC
+
+  @impl true
+  def handle_init(_ctx, _opts) do
+    spec = [
+      child(:webrtc_source, %WebRTC.Source{
+        signaling: {:websocket, port: 8829},
+        video_codec: :h264
+      })
+      |> via_out(Pad.ref(:output, :video_track), options: [kind: :video])
+      |> via_in(Pad.ref(:input, :video_track), options: [kind: :video])
+      |> child(:webrtc_sink, %WebRTC.Sink{
+        signaling: {:websocket, port: 8830},
+        video_codec: :h264
+      }),
+      get_child(:webrtc_source)
+      |> via_out(Pad.ref(:output, :audio_track), options: [kind: :audio])
+      |> child(Membrane.Opus.Parser)
+      |> via_in(Pad.ref(:input, :audio_track), options: [kind: :audio])
+      |> get_child(:webrtc_sink)
+    ]
+
+    {[spec: spec], %{webrtc_sink_pads_with_eos: []}}
+  end
+
+  @impl true
+  def handle_element_end_of_stream(pad, :webrtc_sink, _ctx, state) do
+    state = Map.update!(state, :webrtc_sink_pads_with_eos, &[pad | &1])
+
+    if length(state.webrtc_sink_pads_with_eos) >= 2 do
+      {[terminate: :normal], state}
+    else
+      {[], state}
+    end
+  end
+
+  def handle_element_end_of_stream(_pad, _child, _ctx, state), do: {[], state}
+end
+```
+
+## Run the pipeline
+
+Run both cells below and enter `localhost:8000` url using your browser.
+
+```elixir
+{:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(WebRTCPipeline, [])
+ref = Process.monitor(supervisor)
+
+:inets.start()
+
+{:ok, ref} =
+  :inets.start(:httpd,
+    bind_address: ~c"localhost",
+    port: 8000,
+    document_root: ~c"#{__DIR__}/../../assets/browser_to_browser",
+    server_name: ~c"webrtc",
+    server_root: "/tmp"
+  )
+
+receive do
+  {:DOWN, ^ref, _process, _pid, _reason} -> :ok
+end
+
+:inets.terminate(:httpd, ref)
+```
+
+<!-- livebook:{"branch_parent_index":0} -->
+
+## Exercise C1: Style Transfer Live
+
+Use your `StyleTranferFilter` from the previous exercises and put it in the pipeline, to have a pipeline that performs style transfer on live video.
+
+```elixir
+defmodule StyleTransferFilter do
+  use Membrane.Filter
+
+  @impl true
+  def handle_init(_ctx, _opts), do: {[], %{}}
+
+  @impl true
+  def handle_setup(_ctx, state) do
+    # setup the element
+    {[], state}
+  end
+
+  # more callbacks 
+end
+```
+
+```elixir
+defmodule LiveStyleTransferPipeline do
+  use Membrane.Pipeline
+
+  alias Membrane.WebRTC
+
+  @impl true
+  def handle_init(_ctx, _opts) do
+    spec = [
+      child(:webrtc_source, %WebRTC.Source{
+        signaling: {:websocket, port: 8829},
+        video_codec: :h264
+      })
+      |> via_out(Pad.ref(:output, :video_track), options: [kind: :video])
+      # |> child(%Membrane.H264.Parser{output_alignment: :au})
+      # |> child(Membrane.H264.FFmpeg.Decoder)
+      # |> child(%Membrane.FFmpeg.SWScale.Converter{format: :RGB, output_width: 320})
+      # |> child(%Membrane.StyleTransfer{style: :princess})
+      # |> child(%Membrane.FFmpeg.SWScale.Converter{format: :I420})
+      # |> child(%Membrane.H264.FFmpeg.Encoder{preset: :ultrafast})
+      # |> child(%Membrane.H264.Parser{output_alignment: :nalu})
+      |> via_in(Pad.ref(:input, :video_track), options: [kind: :video])
+      |> child(:webrtc_sink, %WebRTC.Sink{signaling: {:websocket, port: 8830}, video_codec: :h264}),
+      get_child(:webrtc_source)
+      |> via_out(Pad.ref(:output, :audio_track), options: [kind: :audio])
+      |> child(Membrane.Opus.Parser)
+      |> via_in(Pad.ref(:input, :audio_track), options: [kind: :audio])
+      |> get_child(:webrtc_sink)
+    ]
+
+    {[spec: spec], %{webrtc_sink_pads_with_eos: []}}
+  end
+
+  @impl true
+  def handle_element_end_of_stream(pad, :webrtc_sink, _ctx, state) do
+    state = Map.update!(state, :webrtc_sink_pads_with_eos, &[pad | &1])
+
+    if length(state.webrtc_sink_pads_with_eos) >= 2 do
+      {[terminate: :normal], state}
+    else
+      {[], state}
+    end
+  end
+
+  def handle_element_end_of_stream(_pad, _child, _ctx, state), do: {[], state}
+end
+```
+
+```elixir
+{:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(LiveStyleTransferPipeline, [])
+ref = Process.monitor(supervisor)
+
+:inets.start()
+
+{:ok, ref} =
+  :inets.start(:httpd,
+    bind_address: ~c"localhost",
+    port: 8000,
+    document_root: ~c"#{__DIR__}/../../assets/browser_to_browser",
+    server_name: ~c"webrtc",
+    server_root: "/tmp"
+  )
+
+receive do
+  {:DOWN, ^ref, _process, _pid, _reason} -> :ok
+end
+
+:inets.terminate(:httpd, ref)
+```

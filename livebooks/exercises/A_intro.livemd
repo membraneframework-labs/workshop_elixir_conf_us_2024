@@ -1,1 +1,164 @@
-# Untitled notebook
+# A: Intro
+
+```elixir
+Logger.configure(level: :info)
+
+Mix.install([
+  :membrane_core,
+  :membrane_hackney_plugin,
+  :membrane_mp3_mad_plugin,
+  :membrane_portaudio_plugin,
+  {:membrane_webrtc_plugin, "~> 0.19.0"},
+  # {:membrane_style_transfer_plugin,
+  #  path: "/Users/feliks/membrane/membrane_style_transfer_plugin"},
+  {:membrane_camera_capture_plugin, "~> 0.7.2"},
+  {:membrane_h264_ffmpeg_plugin, "~> 0.31.6"},
+  {:membrane_h26x_plugin, "~> 0.10.2"},
+  {:membrane_sdl_plugin, "~> 0.18.2"},
+  # {:membrane_mp4_plugin, "~> 0.35.0"},
+  {:membrane_mp4_plugin, path: "/Users/feliks/membrane/membrane_mp4_plugin"},
+  {:membrane_file_plugin, "~> 0.17.0"},
+  {:membrane_matroska_plugin, "~> 0.5.1"},
+  # {:membrane_ffmpeg_swscale_plugin,
+  #  path: "/Users/feliks/membrane/membrane_ffmpeg_swscale_plugin"},
+  :membrane_realtimer_plugin,
+  {:kino, "~> 0.13.1"},
+  :membrane_opus_plugin
+])
+```
+
+## Example
+
+Here we have an example of Membrane pipeline, that transcodes and transmuxes video from MP4 container with video encoded with H264 codec to MKV container with video encoded with H264(change to VP8) codec.
+
+```elixir
+defmodule TransmuxingPipeline do
+  use Membrane.Pipeline
+
+  @impl true
+  def handle_init(_ctx, _options) do
+    priv = "#{__DIR__}/../../priv/" |> Path.expand()
+    mp4_path = Path.join(priv, "fixtures/bunny_without_sound.mp4")
+    mkv_path = Path.join(priv, "outputs/bunny_without_sound.mkv")
+
+    spec = [
+      child(:source, %Membrane.File.Source{location: mp4_path})
+      |> child(:mp4_demuxer, Membrane.MP4.Demuxer.ISOM)
+      |> via_out(:output, options: [kind: :video])
+      |> child(:h264_parser_1, %Membrane.H264.Parser{output_stream_structure: :annexb})
+      |> child(:h264_decoder, Membrane.H264.FFmpeg.Decoder)
+      |> child(:h264_encoder, %Membrane.H264.FFmpeg.Encoder{preset: :fast})
+      |> child(:h264_parser_2, %Membrane.H264.Parser{output_stream_structure: :avc1})
+      |> child(:matroska_muxer, Membrane.Matroska.Muxer)
+      |> child(:file_sink, %Membrane.File.Sink{location: mkv_path})
+    ]
+
+    {[spec: spec], %{}}
+  end
+
+  @impl true
+  def handle_element_end_of_stream(:file_sink, _input, _ctx, state) do
+    {[terminate: :normal], state}
+  end
+
+  @impl true
+  def handle_element_end_of_stream(_element, _input, _ctx, state), do: {[], state}
+end
+```
+
+Cell below runs the pipeline and waits until it finishes its processing.
+
+```elixir
+{:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(TransmuxingPipeline)
+ref = Process.monitor(supervisor)
+
+receive do
+  {:DOWN, ^ref, _process, _pid, _reason} -> :ok
+end
+```
+
+Now, you can run the output file with the following command:
+
+```bash
+$ ffplay workshop_elixir_conf_us_2024/priv/outputs/bunny_without_sound.mkv
+```
+
+## Exercise A1: Scale video
+
+Add `Membrane.FFmpeg.SWScale.Converter` to the pipeline above and the set the video width to 640 pixels. [Documentation](https://hexdocs.pm/membrane_ffmpeg_swscale_plugin/Membrane.FFmpeg.SWScale.Converter.html) will be helpful.
+
+## Exercise A2: Add sound
+
+`priv/fixtures/bunny_without_sound.mp4` is a MP4 container having only one video track. `priv/fixtures/bunny_with_sound.mp4` is a MP4 container having two tracks: one audio and one video.
+
+Modify the pipeline in the following way:
+
+* as a source file use `priv/a2/bunny_with_sound.mp4` instead of `priv/a1/bunny_without_sound.mp4`
+* save the output of your pipeline in `priv/outputs/bunny_with_sound.mkv`
+* modify the spec returned from `handle_init/2` to support also an audio track, so that the output file contains the audio from the source file.
+
+## Exercise A3*: Revert colors
+
+Write your own element reverting colors and add it to the pipeline. Adding `Membrane.FFmpeg.SWScale.Converter` before and after your custom filter might be helpful. Use an element template below:
+
+```elixir
+defmodule ColorReverter do
+  use Membrane.Filter
+  alias Membrane.RawVideo
+
+  def_input_pad(:input, accepted_format: %RawVideo{pixel_format: :RGB})
+  def_output_pad(:output, accepted_format: %RawVideo{pixel_format: :RGB})
+
+  # callbacks implementation
+end
+```
+
+```elixir
+defmodule ColorRevertingPipeline do
+  use Membrane.Pipeline
+
+  @impl true
+  def handle_init(_ctx, _options) do
+    priv = "#{__DIR__}/../../priv/" |> Path.expand()
+    mp4_path = Path.join(priv, "fixtures/bunny_with_sound.mp4")
+    mkv_path = Path.join(priv, "outputs/bunny_with_reverted_colors.mkv")
+
+    spec = [
+      child(:source, %Membrane.File.Source{location: mp4_path})
+      |> child(:mp4_demuxer, Membrane.MP4.Demuxer.ISOM),
+      |> child(:h264_parser_1, %Membrane.H264.Parser{output_stream_structure: :annexb})
+      |> child(:h264_decoder, Membrane.H264.FFmpeg.Decoder)
+      # |> ...
+      |> child(:h264_encoder, %Membrane.H264.FFmpeg.Encoder{preset: :fast})
+      |> child(:h264_parser_2, %Membrane.H264.Parser{output_stream_structure: :avc1})
+      |> child(:matroska_muxer, Membrane.Matroska.Muxer)
+      |> child(:file_sink, %Membrane.File.Sink{location: mkv_path})
+    ]
+
+    {[spec: spec], %{}}
+  end
+
+  @impl true
+  def handle_element_end_of_stream(:file_sink, _input, _ctx, state) do
+    {[terminate: :normal], state}
+  end
+
+  @impl true
+  def handle_element_end_of_stream(_element, _input, _ctx, state), do: {[], state}
+end
+```
+
+```elixir
+{:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(ColorRevertingPipeline)
+ref = Process.monitor(supervisor)
+
+receive do
+  {:DOWN, ^ref, _process, _pid, _reason} -> :ok
+end
+```
+
+Play the output file with the command below:
+
+```bash
+$ ffplay workshop_elixir_conf_us_2024/priv/outputs/bunny_with_reverted_colors.mkv
+```
