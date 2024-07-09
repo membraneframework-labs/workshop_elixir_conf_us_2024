@@ -87,6 +87,8 @@ $ ffplay workshop_elixir_conf_us_2024/priv/outputs/bunny_without_sound.mkv
 
 Add `Membrane.FFmpeg.SWScale.Converter` to the pipeline above and the set the video width to 640 pixels. [Documentation](https://hexdocs.pm/membrane_ffmpeg_swscale_plugin/Membrane.FFmpeg.SWScale.Converter.html) will be helpful.
 
+How long did pipeline work before adding an element reducing the video size? What is the reason of this change?
+
 ## Exercise A2: Add sound
 
 `priv/fixtures/bunny_without_sound.mp4` is a MP4 container having only one video track. `priv/fixtures/bunny_with_sound.mp4` is a MP4 container having two tracks: one audio and one video.

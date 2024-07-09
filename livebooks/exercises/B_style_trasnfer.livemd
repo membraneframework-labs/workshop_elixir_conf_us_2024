@@ -95,7 +95,7 @@ defmodule StyleTransferPipeline do
 
   @impl true
   def handle_init(_ctx, _options) do
-    input_path = "#{__DIR__}/priv/fixtures/clip_BigBuckBunny.mp4"
+    input_path = "#{__DIR__}/priv/fixtures/bunny_with_sound.mp4"
     output_path = "#{__DIR__}/priv/outputs/style_transfer_bunny.mp4"
 
     spec = [

@@ -1,1 +1,213 @@
-# Untitled notebook
+# Solutions: B
+
+```elixir
+Logger.configure(level: :info)
+
+Mix.install([
+  :membrane_core,
+  :membrane_hackney_plugin,
+  :membrane_mp3_mad_plugin,
+  :membrane_portaudio_plugin,
+  {:membrane_webrtc_plugin, "~> 0.19.0"},
+  # {:membrane_style_transfer_plugin,
+  #  path: "/Users/feliks/membrane/membrane_style_transfer_plugin"},
+  {:membrane_camera_capture_plugin, "~> 0.7.2"},
+  {:membrane_h264_ffmpeg_plugin, "~> 0.31.6"},
+  {:membrane_h26x_plugin, "~> 0.10.2"},
+  {:membrane_sdl_plugin, "~> 0.18.2"},
+  # {:membrane_mp4_plugin, "~> 0.35.0"},
+  {:membrane_mp4_plugin, path: "/Users/feliks/membrane/membrane_mp4_plugin"},
+  {:membrane_file_plugin, "~> 0.17.0"},
+  {:membrane_matroska_plugin, "~> 0.5.1"},
+  # {:membrane_ffmpeg_swscale_plugin,
+  #  path: "/Users/feliks/membrane/membrane_ffmpeg_swscale_plugin"},
+  :membrane_realtimer_plugin,
+  {:kino, "~> 0.13.1"},
+  :membrane_opus_plugin
+])
+```
+
+## Exercise B1
+
+```elixir
+defmodule StyleTransferFilter do
+  use Membrane.Filter
+
+  def_input_pad(:input,
+    accepted_format: %Membrane.RawVideo{pixel_format: :RGB}
+  )
+
+  def_output_pad(:output,
+    accepted_format: %Membrane.RawVideo{pixel_format: :RGB}
+  )
+
+  @impl true
+  def handle_init(_ctx, _opts), do: {[], %{model: nil}}
+
+  @impl true
+  def handle_setup(_ctx, state) do
+    model = "#{__DIR__}/../../priv/models/picasso.onnx" |> Ortex.load()
+    {[], %{state | model: model}}
+  end
+
+  @impl true
+  def handle_buffer(:input, buffer, ctx, state) do
+    input_tensor = preprocess(buffer, ctx.pads.input.stream_format)
+
+    {output_tensor} =
+      Ortex.run(loaded_model, {
+        preprocessed_image_tensor,
+        Nx.tensor([1.0, 1.0, 1.0, 1.0], type: :f32)
+      })
+
+    output_payload = postprocess(output_tensor, ctx.pads.input.stream_format)
+    buffer = %{buffer | payload: output_payload}
+
+    {[buffer: {:output, buffer}], state}
+  end
+
+  defp preprocess(payload, format) do
+    payload
+    |> Nx.from_binary(:u8, backend: EXLA.Backend)
+    |> Nx.as_type(:f32)
+    |> Nx.reshape({1, format.height, format.width, 3})
+    |> Nx.transpose(axes: [0, 3, 1, 2])
+  end
+
+  defp postprocess(tensor, format) do
+    tensor
+    |> Nx.backend_transfer(EXLA.Backend)
+    |> Nx.reshape({3, format.height, format.width})
+    |> Nx.transpose(axes: [1, 2, 0])
+    |> clamp()
+    |> Nx.round()
+    |> Nx.as_type(:u8)
+    |> Nx.to_binary()
+  end
+
+  defp clamp(tensor) do
+    tensor
+    |> Nx.max(0.0)
+    |> Nx.min(255.0)
+  end
+end
+```
+
+## Exercise B3
+
+`handle_init/2`, `handle_setup/2` and `handle_tick/3` should have implementations as follows. `handle_buffer/4` should remain unchanged
+
+```
+@impl true
+def handle_init(_ctx, _opts) do
+  actions = [start_timer: {:my_timer, Membrane.Time.milliseconds(1500)}]
+  state = %{models: nil, current_model: nil}
+  {actions, state}
+end
+
+@impl true
+def handle_setup(_ctx, state) do
+  directory_path = "~/membrane/elixir_conf_us_2024_workshop/priv/b" |> Path.expand()
+  
+  models = 
+    File.ls!(directory_path)
+    |> Enum.map(fn model_filename ->
+      Path.join(directory_path, model_filename)
+      |> Ortex.load()
+    end)
+
+  current_model = Enum.random(models)
+
+  {[], %{state | models: models, current_model: current_model}}
+end
+
+@impl true
+def handle_tick(:timer, _ctx, state) do
+  current_model = Enum.random(state.models)
+  {[], %{state | current_model: current_model}}
+end
+```
+
+```elixir
+defmodule StyleTransferFilter do
+  use Membrane.Filter
+
+  def_input_pad(:input,
+    accepted_format: %Membrane.RawVideo{pixel_format: :RGB}
+  )
+
+  def_output_pad(:output,
+    accepted_format: %Membrane.RawVideo{pixel_format: :RGB}
+  )
+
+  @impl true
+  def handle_init(_ctx, _opts) do
+    actions = [start_timer: {:my_timer, Membrane.Time.milliseconds(1500)}]
+    state = %{models: nil, current_model: nil}
+    {actions, state}
+  end
+
+  @impl true
+  def handle_setup(_ctx, state) do
+    directory_path = "~/membrane/elixir_conf_us_2024_workshop/priv/b" |> Path.expand()
+
+    models =
+      File.ls!(directory_path)
+      |> Enum.map(fn model_filename ->
+        Path.join(directory_path, model_filename)
+        |> Ortex.load()
+      end)
+
+    current_model = Enum.random(models)
+
+    {[], %{state | models: models, current_model: current_model}}
+  end
+
+  @impl true
+  def handle_tick(:timer, _ctx, state) do
+    current_model = Enum.random(state.models)
+    {[], %{state | current_model: current_model}}
+  end
+
+  @impl true
+  def handle_buffer(:input, buffer, ctx, state) do
+    input_tensor = preprocess(buffer, ctx.pads.input.stream_format)
+
+    {output_tensor} =
+      Ortex.run(loaded_model, {
+        preprocessed_image_tensor,
+        Nx.tensor([1.0, 1.0, 1.0, 1.0], type: :f32)
+      })
+
+    output_payload = postprocess(output_tensor, ctx.pads.input.stream_format)
+    buffer = %{buffer | payload: output_payload}
+
+    {[buffer: {:output, buffer}], state}
+  end
+
+  defp preprocess(payload, format) do
+    payload
+    |> Nx.from_binary(:u8, backend: EXLA.Backend)
+    |> Nx.as_type(:f32)
+    |> Nx.reshape({1, format.height, format.width, 3})
+    |> Nx.transpose(axes: [0, 3, 1, 2])
+  end
+
+  defp postprocess(tensor, format) do
+    tensor
+    |> Nx.backend_transfer(EXLA.Backend)
+    |> Nx.reshape({3, format.height, format.width})
+    |> Nx.transpose(axes: [1, 2, 0])
+    |> clamp()
+    |> Nx.round()
+    |> Nx.as_type(:u8)
+    |> Nx.to_binary()
+  end
+
+  defp clamp(tensor) do
+    tensor
+    |> Nx.max(0.0)
+    |> Nx.min(255.0)
+  end
+end
+```

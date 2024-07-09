@@ -75,7 +75,7 @@ defmodule WebRTCPipeline do
 end
 ```
 
-## Run the pipeline
+## Untitled
 
 Run both cells below and enter `localhost:8000` url using your browser.
 

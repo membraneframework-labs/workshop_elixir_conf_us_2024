@@ -1,0 +1,74 @@
+# Hints
+
+## Untitled
+
+<details>
+<summary><b>Exercise A1</b></summary>
+Notice, that `Membrane.FFmpeg.SWScale.Converter` consumes and returns raw video frames.
+</details>
+
+<details>
+<summary><b>Exercise A2</b></summary>
+Function `get_child/1` might be helpful.
+</details>
+
+<details>
+<summary><b>Exercise A3</b></summary>
+You have to implement only `handle_buffer/4` callback in the `ColorReverter` module.
+
+
+```elixir
+@impl true
+def handle_buffer(:input, buffer, _ctx, state) do
+  payload = 
+    buffer.payload
+    # |> some processing
+  
+  buffer = %{buffer | payload: payload}
+  {[buffer: {:output, buffer}], state}
+end
+```
+
+</details>
+
+<details>
+<summary><b>Exercise B1: first hint</b></summary>
+
+
+```elixir
+defp preprocess(buffer, input_stream_format) do
+  buffer.payload
+  |> Nx.from_binary(:u8, backend: EXLA.Backend)
+  |> Nx.as_type(:f32)
+  |> Nx.reshape({1, input_stream_format.height, input_stream_format.width, 3})
+  |> Nx.transpose(axes: [0, 3, 1, 2])
+end
+```
+
+
+</details>
+
+<details>
+<summary><b>Exercise B1: second hint</b></summary>
+
+
+```elixir
+defp postprocess(tensor, input_stream_format) do
+  tensor
+  |> Nx.backend_transfer(EXLA.Backend)
+  |> Nx.reshape({3, input_stream_format.height, input_stream_format.width})
+  |> Nx.transpose(axes: [1, 2, 0])
+  |> clamp()
+  |> Nx.round()
+  |> Nx.as_type(:u8)
+  |> Nx.to_binary()
+end
+```
+
+
+</details>
+
+<details>
+<summary><b>Exercise B2</b></summary>
+Get use of `:tick` action and `handle_tick/3` callback.
+</details>
