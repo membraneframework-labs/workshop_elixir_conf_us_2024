@@ -5,6 +5,7 @@ Logger.configure(level: :info)
 
 Mix.install([
   :membrane_core,
+  {:membrane_vpx_plugin, "~> 0.1.0"},
   :membrane_hackney_plugin,
   :membrane_mp3_mad_plugin,
   :membrane_portaudio_plugin,

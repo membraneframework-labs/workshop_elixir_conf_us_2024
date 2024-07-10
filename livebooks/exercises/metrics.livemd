@@ -1,0 +1,28 @@
+# Metrics
+
+```elixir
+Mix.install([
+  :kino_membrane
+])
+```
+
+## Run
+
+```elixir
+node() |> IO.inspect()
+
+case Membrane.Pipeline.list_pipelines(node()) do
+  [pipeline] ->
+    KinoMembrane.pipeline_dashboard(pipeline)
+
+  [pipeline | _tail] = pipelines ->
+    IO.warn(
+      "There is more than one (#{length(pipelines)}) pipeline on the node #{inspect(node())}"
+    )
+
+    KinoMembrane.pipeline_dashboard(pipeline)
+
+  [] ->
+    raise "No running pipelines found in the node #{inspect(node())}"
+end
+```
