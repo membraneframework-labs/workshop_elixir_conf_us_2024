@@ -29,7 +29,7 @@ Mix.install([
 
 ## Exercise A1
 
-The missing child is `|> child(:converter, %Membrane.FFmpeg.SWScale.Converter{output_width: 640})`. It should be put between `:h264_decoder` and `:h264_encoder`.
+The missing child is `|> child(:converter, %Membrane.FFmpeg.SWScale.Converter{output_width: 640})`. It should be put between `:h264_decoder` and `:vp9_encoder`.
 
 ```elixir
 defmodule TransmuxingPipeline do
