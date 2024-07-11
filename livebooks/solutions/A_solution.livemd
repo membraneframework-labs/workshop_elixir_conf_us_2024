@@ -84,8 +84,8 @@ defmodule TransmuxingPipeline do
   @impl true
   def handle_init(_ctx, _options) do
     priv = "#{__DIR__}/../../priv/" |> Path.expand()
-    mp4_path = Path.join(priv, "fixtures/bunny_without_sound.mp4")
-    mkv_path = Path.join(priv, "outputs/bunny_without_sound.mkv")
+    mp4_path = Path.join(priv, "fixtures/bunny_with_sound.mp4")
+    mkv_path = Path.join(priv, "outputs/bunny_with_sound.mkv")
 
     spec = [
       child(:source, %Membrane.File.Source{location: mp4_path})

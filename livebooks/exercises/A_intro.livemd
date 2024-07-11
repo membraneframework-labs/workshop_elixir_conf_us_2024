@@ -53,7 +53,7 @@ defmodule TransmuxingPipeline do
       |> via_out(:output, options: [kind: :video])
       |> child(:h264_parser_1, %Membrane.H264.Parser{output_stream_structure: :annexb})
       |> child(:h264_decoder, Membrane.H264.FFmpeg.Decoder)
-      |> child(:vp9_encoder, %Membrane.VP9.Encoder{})
+      |> child(:vp9_encoder, Membrane.VP9.Encoder)
       |> child(:matroska_muxer, Membrane.Matroska.Muxer)
       |> child(:file_sink, %Membrane.File.Sink{location: mkv_path})
     ]
