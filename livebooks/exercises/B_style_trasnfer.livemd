@@ -5,25 +5,26 @@ Logger.configure(level: :info)
 
 Mix.install([
   :membrane_core,
-  :membrane_hackney_plugin,
-  :membrane_mp3_mad_plugin,
-  :membrane_portaudio_plugin,
+  {:membrane_vpx_plugin, "~> 0.1.1"},
   {:membrane_webrtc_plugin, "~> 0.19.0"},
-  # {:membrane_style_transfer_plugin,
-  #  path: "/Users/feliks/membrane/membrane_style_transfer_plugin"},
   {:membrane_camera_capture_plugin, "~> 0.7.2"},
   {:membrane_h264_ffmpeg_plugin, "~> 0.31.6"},
   {:membrane_h26x_plugin, "~> 0.10.2"},
   {:membrane_sdl_plugin, "~> 0.18.2"},
-  # {:membrane_mp4_plugin, "~> 0.35.0"},
-  {:membrane_mp4_plugin, path: "/Users/feliks/membrane/membrane_mp4_plugin"},
+  {:membrane_mp4_plugin, "~> 0.35.1"},
   {:membrane_file_plugin, "~> 0.17.0"},
-  {:membrane_matroska_plugin, "~> 0.5.1"},
-  # {:membrane_ffmpeg_swscale_plugin,
-  #  path: "/Users/feliks/membrane/membrane_ffmpeg_swscale_plugin"},
+  {:membrane_matroska_plugin, "~> 0.6.0"},
+  {:membrane_ffmpeg_swscale_plugin, "~> 0.16.1"},
   :membrane_realtimer_plugin,
   {:kino, "~> 0.13.1"},
-  :membrane_opus_plugin
+  :membrane_opus_plugin,
+  {:membrane_raw_video_format, "~> 0.4.0", override: true},
+  {:membrane_vp8_format, "~> 0.5.0", override: true},
+  {:membrane_vp9_format, "~> 0.5.0", override: true},
+  {:unifex, "~> 1.2", override: true},
+  {:nx, "~> 0.7.0"},
+  {:exla, "~> 0.7.0"},
+  {:ortex, "~> 0.1.9"}
 ])
 ```
 
@@ -84,6 +85,14 @@ There are some tips, that will be helpfull:
 defmodule StyleTransferFilter do
   use Membrane.Filter
 
+  def_input_pad(:input,
+    accepted_format: %Membrane.RawVideo{pixel_format: :RGB}
+  )
+
+  def_output_pad(:output,
+    accepted_format: %Membrane.RawVideo{pixel_format: :RGB}
+  )
+
   @impl true
   def handle_init(_ctx, _opts), do: {[], %{}}
 
@@ -103,15 +112,16 @@ defmodule StyleTransferPipeline do
 
   @impl true
   def handle_init(_ctx, _options) do
-    input_path = "#{__DIR__}/priv/fixtures/bunny_with_sound.mp4"
-    output_path = "#{__DIR__}/priv/outputs/style_transfer_bunny.mp4"
+    input_path = "#{__DIR__}/../../priv/fixtures/bunny_with_sound.mp4"
+    output_path = "#{__DIR__}/../../priv/outputs/style_transfer_bunny.mp4"
 
     spec = [
       child(:source, %Membrane.File.Source{location: input_path})
       |> child(:mp4_demuxer, Membrane.MP4.Demuxer.ISOM)
-      |> via_out(:output, kind: :video)
+      |> via_out(:output, options: [kind: :video])
       |> child({:h264_parser, 1}, %Membrane.H264.Parser{output_stream_structure: :annexb})
       |> child(:h264_decoder, Membrane.H264.FFmpeg.Decoder)
+      |> child(:converter, %Membrane.FFmpeg.SWScale.Converter{output_width: 640})
       |> child(:rgb_converter, %Membrane.FFmpeg.SWScale.Converter{format: :RGB})
       |> child(:style_transfer, StyleTransferFilter)
       |> child(:yuv_converter, %Membrane.FFmpeg.SWScale.Converter{format: :I420})
@@ -120,7 +130,7 @@ defmodule StyleTransferPipeline do
       |> child(:mp4_muxer, Membrane.MP4.Muxer.ISOM)
       |> child(:file_sink, %Membrane.File.Sink{location: output_path}),
       get_child(:mp4_demuxer)
-      |> via_out(:output, kind: :audio)
+      |> via_out(:output, options: [kind: :audio])
       |> get_child(:mp4_muxer)
     ]
 

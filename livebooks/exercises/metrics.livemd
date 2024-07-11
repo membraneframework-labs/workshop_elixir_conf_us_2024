@@ -11,7 +11,7 @@ Mix.install([
 Set the variable below to the value returned from `Get node` section in the livebook with exercises
 
 ```elixir
-node = :"e74hdcbz-livebook_app@MacBook-Pro-18"
+node = :"7t5n6e3c-livebook_app@MacBook-Pro-18"
 ```
 
 ```elixir

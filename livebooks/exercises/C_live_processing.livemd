@@ -5,26 +5,26 @@ Logger.configure(level: :info)
 
 Mix.install([
   :membrane_core,
-  {:membrane_vpx_plugin, "~> 0.1.0"},
-  :membrane_hackney_plugin,
-  :membrane_mp3_mad_plugin,
-  :membrane_portaudio_plugin,
+  {:membrane_vpx_plugin, "~> 0.1.1"},
   {:membrane_webrtc_plugin, "~> 0.19.0"},
-  # {:membrane_style_transfer_plugin,
-  #  path: "/Users/feliks/membrane/membrane_style_transfer_plugin"},
   {:membrane_camera_capture_plugin, "~> 0.7.2"},
   {:membrane_h264_ffmpeg_plugin, "~> 0.31.6"},
   {:membrane_h26x_plugin, "~> 0.10.2"},
   {:membrane_sdl_plugin, "~> 0.18.2"},
-  # {:membrane_mp4_plugin, "~> 0.35.0"},
-  {:membrane_mp4_plugin, path: "/Users/feliks/membrane/membrane_mp4_plugin"},
+  {:membrane_mp4_plugin, "~> 0.35.1"},
   {:membrane_file_plugin, "~> 0.17.0"},
-  {:membrane_matroska_plugin, "~> 0.5.1"},
-  # {:membrane_ffmpeg_swscale_plugin,
-  #  path: "/Users/feliks/membrane/membrane_ffmpeg_swscale_plugin"},
+  {:membrane_matroska_plugin, "~> 0.6.0"},
+  {:membrane_ffmpeg_swscale_plugin, "~> 0.16.1"},
   :membrane_realtimer_plugin,
   {:kino, "~> 0.13.1"},
-  :membrane_opus_plugin
+  :membrane_opus_plugin,
+  {:membrane_raw_video_format, "~> 0.4.0", override: true},
+  {:membrane_vp8_format, "~> 0.5.0", override: true},
+  {:membrane_vp9_format, "~> 0.5.0", override: true},
+  {:unifex, "~> 1.2", override: true},
+  {:nx, "~> 0.7.0"},
+  {:exla, "~> 0.7.0"},
+  {:ortex, "~> 0.1.9"}
 ])
 ```
 
@@ -51,13 +51,13 @@ defmodule WebRTCPipeline do
     spec = [
       child(:webrtc_source, %WebRTC.Source{
         signaling: {:websocket, port: 8829},
-        video_codec: :h264
+        video_codec: :vp8
       })
       |> via_out(Pad.ref(:output, :video_track), options: [kind: :video])
       |> via_in(Pad.ref(:input, :video_track), options: [kind: :video])
       |> child(:webrtc_sink, %WebRTC.Sink{
-        signaling: {:websocket, port: 8830},
-        video_codec: :h264
+        signaling: {:websocket, port: 8831},
+        video_codec: :vp8
       }),
       get_child(:webrtc_source)
       |> via_out(Pad.ref(:output, :audio_track), options: [kind: :audio])
@@ -84,9 +84,7 @@ defmodule WebRTCPipeline do
 end
 ```
 
-## Untitled
-
-Run both cells below and enter `localhost:8000` url using your browser.
+Run both cells below and enter `http://localhost:8000/index.html` url using your browser.
 
 ```elixir
 {:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(WebRTCPipeline, [])
@@ -94,14 +92,14 @@ ref = Process.monitor(supervisor)
 
 :inets.start()
 
-{:ok, ref} =
-  :inets.start(:httpd,
-    bind_address: ~c"localhost",
-    port: 8000,
-    document_root: ~c"#{__DIR__}/../../assets/browser_to_browser",
-    server_name: ~c"webrtc",
-    server_root: "/tmp"
-  )
+# {:ok, ref} = 
+:inets.start(:httpd,
+  bind_address: ~c"localhost",
+  port: 8000,
+  document_root: ~c"#{__DIR__}/../../assets/browser_to_browser",
+  server_name: ~c"webrtc",
+  server_root: "/tmp"
+)
 
 receive do
   {:DOWN, ^ref, _process, _pid, _reason} -> :ok
@@ -144,18 +142,14 @@ defmodule LiveStyleTransferPipeline do
     spec = [
       child(:webrtc_source, %WebRTC.Source{
         signaling: {:websocket, port: 8829},
-        video_codec: :h264
+        video_codec: :vp8
       })
       |> via_out(Pad.ref(:output, :video_track), options: [kind: :video])
-      # |> child(%Membrane.H264.Parser{output_alignment: :au})
-      # |> child(Membrane.H264.FFmpeg.Decoder)
-      # |> child(%Membrane.FFmpeg.SWScale.Converter{format: :RGB, output_width: 320})
-      # |> child(%Membrane.StyleTransfer{style: :princess})
-      # |> child(%Membrane.FFmpeg.SWScale.Converter{format: :I420})
-      # |> child(%Membrane.H264.FFmpeg.Encoder{preset: :ultrafast})
-      # |> child(%Membrane.H264.Parser{output_alignment: :nalu})
       |> via_in(Pad.ref(:input, :video_track), options: [kind: :video])
-      |> child(:webrtc_sink, %WebRTC.Sink{signaling: {:websocket, port: 8830}, video_codec: :h264}),
+      |> child(:webrtc_sink, %WebRTC.Sink{
+        signaling: {:websocket, port: 8831},
+        video_codec: :vp8
+      }),
       get_child(:webrtc_source)
       |> via_out(Pad.ref(:output, :audio_track), options: [kind: :audio])
       |> child(Membrane.Opus.Parser)
@@ -187,14 +181,13 @@ ref = Process.monitor(supervisor)
 
 :inets.start()
 
-{:ok, ref} =
-  :inets.start(:httpd,
-    bind_address: ~c"localhost",
-    port: 8000,
-    document_root: ~c"#{__DIR__}/../../assets/browser_to_browser",
-    server_name: ~c"webrtc",
-    server_root: "/tmp"
-  )
+:inets.start(:httpd,
+  bind_address: ~c"localhost",
+  port: 8000,
+  document_root: ~c"#{__DIR__}/../../assets/browser_to_browser",
+  server_name: ~c"webrtc",
+  server_root: "/tmp"
+)
 
 receive do
   {:DOWN, ^ref, _process, _pid, _reason} -> :ok

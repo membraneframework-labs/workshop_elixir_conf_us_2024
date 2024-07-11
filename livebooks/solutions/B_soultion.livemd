@@ -5,25 +5,26 @@ Logger.configure(level: :info)
 
 Mix.install([
   :membrane_core,
-  :membrane_hackney_plugin,
-  :membrane_mp3_mad_plugin,
-  :membrane_portaudio_plugin,
+  {:membrane_vpx_plugin, "~> 0.1.1"},
   {:membrane_webrtc_plugin, "~> 0.19.0"},
-  # {:membrane_style_transfer_plugin,
-  #  path: "/Users/feliks/membrane/membrane_style_transfer_plugin"},
   {:membrane_camera_capture_plugin, "~> 0.7.2"},
   {:membrane_h264_ffmpeg_plugin, "~> 0.31.6"},
   {:membrane_h26x_plugin, "~> 0.10.2"},
   {:membrane_sdl_plugin, "~> 0.18.2"},
-  # {:membrane_mp4_plugin, "~> 0.35.0"},
-  {:membrane_mp4_plugin, path: "/Users/feliks/membrane/membrane_mp4_plugin"},
+  {:membrane_mp4_plugin, "~> 0.35.1"},
   {:membrane_file_plugin, "~> 0.17.0"},
-  {:membrane_matroska_plugin, "~> 0.5.1"},
-  # {:membrane_ffmpeg_swscale_plugin,
-  #  path: "/Users/feliks/membrane/membrane_ffmpeg_swscale_plugin"},
+  {:membrane_matroska_plugin, "~> 0.6.0"},
+  {:membrane_ffmpeg_swscale_plugin, "~> 0.16.1"},
   :membrane_realtimer_plugin,
   {:kino, "~> 0.13.1"},
-  :membrane_opus_plugin
+  :membrane_opus_plugin,
+  {:membrane_raw_video_format, "~> 0.4.0", override: true},
+  {:membrane_vp8_format, "~> 0.5.0", override: true},
+  {:membrane_vp9_format, "~> 0.5.0", override: true},
+  {:unifex, "~> 1.2", override: true},
+  {:nx, "~> 0.7.0"},
+  {:exla, "~> 0.7.0"},
+  {:ortex, "~> 0.1.9"}
 ])
 ```
 
@@ -52,11 +53,11 @@ defmodule StyleTransferFilter do
 
   @impl true
   def handle_buffer(:input, buffer, ctx, state) do
-    input_tensor = preprocess(buffer, ctx.pads.input.stream_format)
+    input_tensor = preprocess(buffer.payload, ctx.pads.input.stream_format)
 
     {output_tensor} =
-      Ortex.run(loaded_model, {
-        preprocessed_image_tensor,
+      Ortex.run(state.model, {
+        input_tensor,
         Nx.tensor([1.0, 1.0, 1.0, 1.0], type: :f32)
       })
 
@@ -95,7 +96,9 @@ end
 
 ## Exercise B3
 
-`handle_init/2`, `handle_setup/2` and `handle_tick/3` should have implementations as follows. `handle_buffer/4` should remain unchanged
+`handle_init/2`, `handle_setup/2` and `handle_tick/3` should have implementations as follows. `handle_buffer/4` should remain unchanged.
+
+Add `|> via_in(:input, auto_demand_size: 5)` before `|> child(:style_transfer, ...)` in the spec returned in pipeline, to avoid having processing data chunks in `StyleTransferFilter`
 
 ```
 @impl true
@@ -142,14 +145,13 @@ defmodule StyleTransferFilter do
 
   @impl true
   def handle_init(_ctx, _opts) do
-    actions = [start_timer: {:my_timer, Membrane.Time.milliseconds(1500)}]
     state = %{models: nil, current_model: nil}
-    {actions, state}
+    {[], state}
   end
 
   @impl true
   def handle_setup(_ctx, state) do
-    directory_path = "~/membrane/elixir_conf_us_2024_workshop/priv/b" |> Path.expand()
+    directory_path = Path.join(__DIR__, "../../priv/models")
 
     models =
       File.ls!(directory_path)
@@ -160,22 +162,24 @@ defmodule StyleTransferFilter do
 
     current_model = Enum.random(models)
 
-    {[], %{state | models: models, current_model: current_model}}
+    actions = [start_timer: {:my_timer, Membrane.Time.milliseconds(1500)}]
+    state = %{state | models: models, current_model: current_model}
+    {actions, state}
   end
 
   @impl true
-  def handle_tick(:timer, _ctx, state) do
+  def handle_tick(:my_timer, _ctx, state) do
     current_model = Enum.random(state.models)
     {[], %{state | current_model: current_model}}
   end
 
   @impl true
   def handle_buffer(:input, buffer, ctx, state) do
-    input_tensor = preprocess(buffer, ctx.pads.input.stream_format)
+    input_tensor = preprocess(buffer.payload, ctx.pads.input.stream_format)
 
     {output_tensor} =
-      Ortex.run(loaded_model, {
-        preprocessed_image_tensor,
+      Ortex.run(state.current_model, {
+        input_tensor,
         Nx.tensor([1.0, 1.0, 1.0, 1.0], type: :f32)
       })
 
