@@ -8,10 +8,14 @@ Mix.install([
 
 ## Run
 
-```elixir
-node() |> IO.inspect()
+Set the variable below to the value returned from `Get node` section in the livebook with exercises
 
-case Membrane.Pipeline.list_pipelines(node()) do
+```elixir
+node = :"e74hdcbz-livebook_app@MacBook-Pro-18"
+```
+
+```elixir
+case Membrane.Pipeline.list_pipelines(node) do
   [pipeline] ->
     KinoMembrane.pipeline_dashboard(pipeline)
 

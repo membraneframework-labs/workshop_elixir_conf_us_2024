@@ -28,6 +28,14 @@ Mix.install([
 ])
 ```
 
+## Get node
+
+Value returned by `Node.self()` can be used to get the metrics from the running pipelines
+
+```elixir
+Node.self()
+```
+
 ## WebRTCPipeline
 
 The pipeline below gets the audio and video from the browser and resends it back.

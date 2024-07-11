@@ -1,4 +1,4 @@
-# A: Intro
+# A: intro
 
 ```elixir
 Logger.configure(level: :info)
@@ -6,9 +6,6 @@ Logger.configure(level: :info)
 Mix.install([
   :membrane_core,
   {:membrane_vpx_plugin, "~> 0.1.1"},
-  # :membrane_hackney_plugin,
-  # :membrane_mp3_mad_plugin,
-  # :membrane_portaudio_plugin,
   {:membrane_webrtc_plugin, "~> 0.19.0"},
   {:membrane_camera_capture_plugin, "~> 0.7.2"},
   {:membrane_h264_ffmpeg_plugin, "~> 0.31.6"},
@@ -16,8 +13,7 @@ Mix.install([
   {:membrane_sdl_plugin, "~> 0.18.2"},
   {:membrane_mp4_plugin, "~> 0.35.1"},
   {:membrane_file_plugin, "~> 0.17.0"},
-  # {:membrane_matroska_plugin, "~> 0.5.1"},
-  {:membrane_matroska_plugin, path: "/Users/feliks/membrane/membrane_matroska_plugin"},
+  {:membrane_matroska_plugin, "~> 0.6.0"},
   {:membrane_ffmpeg_swscale_plugin, "~> 0.16.1"},
   :membrane_realtimer_plugin,
   {:kino, "~> 0.13.1"},
@@ -27,6 +23,14 @@ Mix.install([
   {:membrane_vp9_format, "~> 0.5.0", override: true},
   {:unifex, "~> 1.2", override: true}
 ])
+```
+
+## Get node
+
+Value returned by `Node.self()` can be used to get the metrics from the running pipelines
+
+```elixir
+Node.self()
 ```
 
 ## Example
@@ -49,10 +53,8 @@ defmodule TransmuxingPipeline do
       |> via_out(:output, options: [kind: :video])
       |> child(:h264_parser_1, %Membrane.H264.Parser{output_stream_structure: :annexb})
       |> child(:h264_decoder, Membrane.H264.FFmpeg.Decoder)
-      # |> child(:h264_encoder, %Membrane.H264.FFmpeg.Encoder{preset: :fast})
-      # |> child(:h264_parser_2, %Membrane.H264.Parser{output_stream_structure: :avc1})
-      # |> child(:vp9_encoder, Membrane.VP9.Encoder)
-      |> child(:vp8_encoder, %Membrane.VP8.Encoder{encoding_deadline: 200})
+      # |> child(:vp9_encoder, %Membrane.VP9.Encoder{encoding_deadline: 200})
+      |> child(:vp9_encoder, %Membrane.VP9.Encoder{})
       |> child(:matroska_muxer, Membrane.Matroska.Muxer)
       |> child(:file_sink, %Membrane.File.Sink{location: mkv_path})
     ]
@@ -70,6 +72,8 @@ defmodule TransmuxingPipeline do
 end
 ```
 
+## Run the Example
+
 Cell below runs the pipeline and waits until it finishes its processing.
 
 ```elixir
@@ -85,10 +89,6 @@ Now, you can run the output file with the following command:
 
 ```bash
 $ ffplay workshop_elixir_conf_us_2024/priv/outputs/bunny_without_sound.mkv
-```
-
-```elixir
-node()
 ```
 
 ## Exercise A1: Scale video

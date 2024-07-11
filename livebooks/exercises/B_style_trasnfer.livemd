@@ -27,6 +27,14 @@ Mix.install([
 ])
 ```
 
+## Get node
+
+Value returned by `Node.self()` can be used to get the metrics from the running pipelines
+
+```elixir
+Node.self()
+```
+
 ## Models
 
 In `priv/models` directory we have a few models in `.onnx` format. Each of them does specyfic style tranfer of the input data.
