@@ -1,12 +1,12 @@
-defmodule Membrane.Template.Mixfile do
+defmodule Membrane.WorkshopElixirConfUS2024.Mixfile do
   use Mix.Project
 
   @version "0.1.0"
-  @github_url "https://github.com/membraneframework/membrane_template_plugin"
+  @github_url "https://github.com/membraneframework-labs/workshop_elixir_conf_us_2024"
 
   def project do
     [
-      app: :membrane_template_plugin,
+      app: :workshop_elixir_conf_us_2024,
       version: @version,
       elixir: "~> 1.13",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -15,11 +15,11 @@ defmodule Membrane.Template.Mixfile do
       dialyzer: dialyzer(),
 
       # hex
-      description: "Template Plugin for Membrane Framework",
+      description: "Membrane Workshop for Elixir Conf US 2024",
       package: package(),
 
       # docs
-      name: "Membrane Template plugin",
+      name: "Membrane Workshop Elixir Conf US 2024",
       source_url: @github_url,
       docs: docs(),
       homepage_url: "https://membrane.stream"
@@ -74,7 +74,7 @@ defmodule Membrane.Template.Mixfile do
       extras: ["README.md", "LICENSE"],
       formatters: ["html"],
       source_ref: "v#{@version}",
-      nest_modules_by_prefix: [Membrane.Template]
+      nest_modules_by_prefix: [Membrane]
     ]
   end
 end
