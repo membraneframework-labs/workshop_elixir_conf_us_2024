@@ -74,11 +74,11 @@ There are some tips, that will be helpfull:
 * always set the `t:Nx.tensor()` backend to `EXLA.Backend`, otherwise operations on tensors will be slow (take a look at `Nx.backend_transfer/2` function and `:backend` option in `Nx.from_binary/3`)
 * Our models expect two input tensors: one representing image, second one specifying parameters used in layers inside the models. Code snippet below illustrates, how to run a model with these two inputs. You can always run the model with the same parameters as in the example.
   ```elixir
-  {output_tensor} = 
-  Ortex.run(loaded_model, {
-    preprocessed_image_tensor, 
-    Nx.tensor([1.0, 1.0, 1.0, 1.0], type: :f32)
-  })
+      {output_tensor} = 
+      Ortex.run(loaded_model, {
+        preprocessed_image_tensor, 
+        Nx.tensor([1.0, 1.0, 1.0, 1.0], type: :f32)
+      })
   ```
 
 ```elixir
