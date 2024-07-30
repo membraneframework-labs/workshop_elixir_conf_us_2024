@@ -5,6 +5,7 @@ Logger.configure(level: :info)
 
 Mix.install([
   :membrane_core,
+  {:workshop_elixir_conf_us_2024, path: Path.join(__DIR__, "../..")},
   {:membrane_vpx_plugin, "~> 0.1.1"},
   {:membrane_webrtc_plugin, "~> 0.19.0"},
   {:membrane_camera_capture_plugin, "~> 0.7.2"},
@@ -160,7 +161,9 @@ defmodule ColorRevertingPipeline do
   def handle_element_end_of_stream(_element, _input, _ctx, state), do: {[], state}
 end
 ```
+
 Now run the pipeline:
+
 ```elixir
 {:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(ColorRevertingPipeline)
 ref = Process.monitor(supervisor)
