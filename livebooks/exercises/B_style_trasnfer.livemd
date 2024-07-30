@@ -3,8 +3,12 @@
 ```elixir
 Logger.configure(level: :info)
 
+System.version() |> IO.inspect()
+# System.pwd()
+
 Mix.install([
   :membrane_core,
+  {:workshop_elixir_conf_us_2024, path: Path.join(__DIR__, "../..")},
   {:membrane_vpx_plugin, "~> 0.1.1"},
   {:membrane_webrtc_plugin, "~> 0.19.0"},
   {:membrane_camera_capture_plugin, "~> 0.7.2"},
@@ -36,7 +40,31 @@ Value returned by `Node.self()` can be used to get the metrics from the running 
 Node.self()
 ```
 
-## Models
+## Axon models
+
+We have two public modules in `:workshop_elixir_conf_us_2024` app: `Workshop.Models.Mosaic` and `Workshop.Models.Candy`.
+
+Each of them defines two functions:
+
+1. `model(image_height, image_width)` which returns Axon model
+2. `postprocess_rescale(tensor)` which rescales approprietaly tensor returned from the Axon model
+
+Weights for these two models are stored in `priv/nx` directory.
+
+```
+$ ls priv/nx
+candy.nx
+mosaic.nx
+```
+
+Both models expect `t:Nx.tensor()` that represents an image. Tensor shape should be `{batch_size, height, width, colors}`, where:
+
+* `batch_size` - number of images passed to the model at once (for us, it might be always equal `1`)
+* `hegith` - image height (in other words, raw video frame height)
+* `width` - image width (in other words, raw video frame width)
+* `colors` - always equal `3`, since in `RGB` each pixel is described by three numbers, for each color
+
+## ONNX models
 
 In `priv/models` directory we have a few models in `.onnx` format. Each of them does specyfic style tranfer of the input data.
 
@@ -52,12 +80,11 @@ udnie.onnx
 vangogh.onnx
 ```
 
-Each model expects `t:Nx.tensor()` that represents an image. Tensor shape should be `{batch_size, colors, height, width}`, where:
+Each model expects `t:Nx.tensor()` that represents an image. Tensor shape should be `{batch_size, colors, height, width}`.
 
-* `batch_size` - number of images passed to the model at once (for us, it might be always equal `1`)
-* `colors` - always equal `3`, since in `RGB` each pixel is described by three numbers, for each color
-* `hegith` - image height (in other words, raw video frame height)
-* `width` - image width (in other words, raw video frame width)
+<b>
+Notice!
+</b>
 
 ## Exercise B1: Write Style Transfer Element
 
@@ -65,20 +92,34 @@ Write your own `StyleTransferFilter`, that will use one of the models above, to 
 
 Then, add your element to the `StyleTransferPipeline` below this exercise.
 
+You can use `Axon` or `Ortex`.
+
 There are some tips, that will be helpfull:
 
-* to use a specific model, we have to load it first, using `Ortex.load/1` function ([Ortex docs](https://hexdocs.pm/ortex/Ortex.html)).
 * raw video frames returned by `SWScale.Converter{format: :RGB}` will have arrangement `H x W x colors`. Number representing one color of one pixel will take 1 byte and won't have a sign.
-* `stream_format` received in `handle_stream_format/4` will contain information about input video width and height
+* `stream_format` received in `handle_stream_format/4` will contain informations about input video width and height
 * `t:Nx.tensor()` returned by a model needs to be clamped to the range between 0 and 255
 * always set the `t:Nx.tensor()` backend to `EXLA.Backend`, otherwise operations on tensors will be slow (take a look at `Nx.backend_transfer/2` function and `:backend` option in `Nx.from_binary/3`)
-* Our models expect two input tensors: one representing image, second one specifying parameters used in layers inside the models. Code snippet below illustrates, how to run a model with these two inputs. You can always run the model with the same parameters as in the example.
+
+### If you decide to use Axon
+
+* to get a model, call `model/2` function from a specific module.
+* to load weights, read conent of one of the `*.nx` files and deserialize it to `Nx.tensor()`.
+* to run a model, execute `Axon.predict/3`. This function expects `Axon` model, model weights and a map having input data under the `"data"` key.
   ```elixir
-      {output_tensor} = 
-      Ortex.run(loaded_model, {
-        preprocessed_image_tensor, 
-        Nx.tensor([1.0, 1.0, 1.0, 1.0], type: :f32)
-      })
+  Axon.predict(model, weights, %{"data" => preprocessed_image_tensor})
+  ```
+
+### If you decide to use Ortex
+
+* to use a specific model, we have to load it first, using `Ortex.load/1` function ([Ortex docs](https://hexdocs.pm/ortex/Ortex.html)).
+* our models expect two input tensors: one representing image, second one specifying parameters used in layers inside the models. Code snippet below illustrates, how to run a model with these two inputs. You can always run the model with the same parameters as in the example.
+  ```elixir
+  {output_tensor} = 
+  Ortex.run(loaded_model, {
+    preprocessed_image_tensor, 
+    Nx.tensor([1.0, 1.0, 1.0, 1.0], type: :f32)
+  })
   ```
 
 ```elixir
@@ -121,8 +162,7 @@ defmodule StyleTransferPipeline do
       |> via_out(:output, options: [kind: :video])
       |> child({:h264_parser, 1}, %Membrane.H264.Parser{output_stream_structure: :annexb})
       |> child(:h264_decoder, Membrane.H264.FFmpeg.Decoder)
-      |> child(:converter, %Membrane.FFmpeg.SWScale.Converter{output_width: 640})
-      |> child(:rgb_converter, %Membrane.FFmpeg.SWScale.Converter{format: :RGB})
+      |> child(:rgb_converter, %Membrane.FFmpeg.SWScale.Converter{format: :RGB, output_width: 640})
       |> child(:style_transfer, StyleTransferFilter)
       |> child(:yuv_converter, %Membrane.FFmpeg.SWScale.Converter{format: :I420})
       |> child(:h264_encoder, %Membrane.H264.FFmpeg.Encoder{preset: :fast})

@@ -38,6 +38,7 @@ defmodule Membrane.WorkshopElixirConfUS2024.Mixfile do
   defp deps do
     [
       {:membrane_core, "~> 1.0"},
+      {:axon, github: "membraneframework-labs/axon"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       {:dialyxir, ">= 0.0.0", only: :dev, runtime: false},
       {:credo, ">= 0.0.0", only: :dev, runtime: false}
