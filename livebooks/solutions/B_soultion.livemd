@@ -47,10 +47,10 @@ defmodule StyleTransferFilter do
 
   @impl true
   def handle_stream_format(:input, format, _ctx, state) do
-    model = Workshop.Models.Candy.model(format.height, format.width)
+    model = Workshop.Models.Mosaic.model(format.height, format.width)
 
     loaded_params =
-      "./priv/candy.nx"
+      "#{__DIR__}/../../priv/nx/mosaic.nx"
       |> File.read!()
       |> Nx.deserialize()
 
@@ -75,10 +75,10 @@ defmodule StyleTransferFilter do
     |> Nx.reshape({1, format.height, format.width, 3})
   end
 
-  defp postprocess(tensor, input_stream_format, model_module) do
+  defp postprocess(tensor, input_stream_format) do
     tensor
     |> Nx.backend_transfer(EXLA.Backend)
-    |> Workshop.Models.Candy.postprocess_rescale()
+    |> Workshop.Models.Mosaic.postprocess_rescale()
     |> Nx.reshape({3, input_stream_format.height, input_stream_format.width})
     |> Nx.round()
     |> Nx.as_type(:u8)

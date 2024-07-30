@@ -6,21 +6,27 @@ Mix.install([
 ])
 ```
 
+## Set the node
+
+Set to the variable below the value that you get from the `Get node` section in the livebook with exercises.
+
+```elixir
+node = :"2q7kylkj-livebook_app@MacBook-Pro-18"
+```
+
 ## Run
 
 ```elixir
-case Membrane.Pipeline.list_pipelines(node()) do
+case Membrane.Pipeline.list_pipelines(node) do
   [pipeline] ->
     KinoMembrane.pipeline_dashboard(pipeline)
 
   [pipeline | _tail] = pipelines ->
-    IO.warn(
-      "There is more than one (#{length(pipelines)}) pipeline on the node #{inspect(node())}"
-    )
+    IO.warn("There is more than one (#{length(pipelines)}) pipeline on the node #{inspect(node)}")
 
     KinoMembrane.pipeline_dashboard(pipeline)
 
   [] ->
-    raise "No running pipelines found in the node #{inspect(node())}"
+    raise "No running pipelines found in the node #{inspect(node)}"
 end
 ```

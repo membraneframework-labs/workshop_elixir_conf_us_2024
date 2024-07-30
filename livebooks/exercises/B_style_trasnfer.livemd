@@ -3,9 +3,6 @@
 ```elixir
 Logger.configure(level: :info)
 
-System.version() |> IO.inspect()
-# System.pwd()
-
 Mix.install([
   :membrane_core,
   {:workshop_elixir_conf_us_2024, path: Path.join(__DIR__, "../..")},
@@ -135,15 +132,47 @@ defmodule StyleTransferFilter do
   )
 
   @impl true
-  def handle_init(_ctx, _opts), do: {[], %{}}
+  def handle_init(_ctx, _opts), do: {[], %{model: nil, loaded_params: nil}}
 
   @impl true
-  def handle_setup(_ctx, state) do
-    # setup the element
-    {[], state}
+  def handle_stream_format(:input, format, _ctx, state) do
+    model = Workshop.Models.Mosaic.model(format.height, format.width)
+
+    loaded_params =
+      "#{__DIR__}/../../priv/nx/mosaic.nx"
+      |> File.read!()
+      |> Nx.deserialize()
+
+    {[stream_format: {:output, format}], %{state | model: model, loaded_params: loaded_params}}
   end
 
-  # more callbacks 
+  @impl true
+  def handle_buffer(:input, buffer, ctx, state) do
+    input_tensor = preprocess(buffer.payload, ctx.pads.input.stream_format)
+    output_tensor = Axon.predict(state.model, state.loaded_params, %{"data" => input_tensor})
+
+    output_payload = postprocess(output_tensor, ctx.pads.input.stream_format)
+    buffer = %{buffer | payload: output_payload}
+
+    {[buffer: {:output, buffer}], state}
+  end
+
+  defp preprocess(payload, format) do
+    payload
+    |> Nx.from_binary(:u8, backend: EXLA.Backend)
+    |> Nx.as_type(:f32)
+    |> Nx.reshape({1, format.height, format.width, 3})
+  end
+
+  defp postprocess(tensor, input_stream_format) do
+    tensor
+    |> Nx.backend_transfer(EXLA.Backend)
+    |> Workshop.Models.Mosaic.postprocess_rescale()
+    |> Nx.reshape({3, input_stream_format.height, input_stream_format.width})
+    |> Nx.round()
+    |> Nx.as_type(:u8)
+    |> Nx.to_binary()
+  end
 end
 ```
 
