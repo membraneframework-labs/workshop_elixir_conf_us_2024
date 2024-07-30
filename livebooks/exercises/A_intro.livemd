@@ -88,6 +88,15 @@ receive do
 end
 ```
 
+If you don't run livebook on your machine, download it with this button
+
+```elixir
+Kino.Download.new(fn -> File.read!("#{__DIR__}/../../priv/outputs/bunny_without_sound.mkv") end,
+  label: "Download the video",
+  filename: "bunny_without_sound.mkv"
+)
+```
+
 Now, you can run the output file with the following command:
 
 ```bash
@@ -171,6 +180,12 @@ ref = Process.monitor(supervisor)
 receive do
   {:DOWN, ^ref, _process, _pid, _reason} -> :ok
 end
+
+Kino.Download.new(
+  fn -> File.read!("#{__DIR__}/../../priv/outputs/bunny_with_reverted_colors.mkv") end,
+  label: "Download the video",
+  filename: "bunny_with_reverted_colors.mkv"
+)
 ```
 
 Play the output file with the command below:

@@ -191,6 +191,11 @@ ref = Process.monitor(supervisor)
 receive do
   {:DOWN, ^ref, _process, _pid, reason} -> reason
 end
+
+Kino.Download.new(fn -> File.read!("#{__DIR__}/../../priv/outputs/style_transfer_bunny.mp4") end,
+  label: "Download the video",
+  filename: "style_transfer_bunny.mp4"
+)
 ```
 
 ## Exercise B2: Compose models
