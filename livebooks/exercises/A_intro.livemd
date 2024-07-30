@@ -38,7 +38,7 @@ Node.self()
 
 ## Example
 
-Here we have an example of Membrane pipeline, that transcodes and transmuxes video from MP4 container with video encoded with H264 codec to MKV container with video encoded with H264(change to VP8) codec.
+Here we have an example of a Membrane pipeline, that transcodes and transmuxes video from MP4 container with video encoded with H264 codec to MKV container with video encoded with H264(change to VP8) codec.
 
 ```elixir
 defmodule TransmuxingPipeline do
@@ -93,25 +93,25 @@ Now, you can run the output file with the following command:
 $ ffplay workshop_elixir_conf_us_2024/priv/outputs/bunny_without_sound.mkv
 ```
 
-## Exercise A1: Scale video
+## Exercise A1: Scaling of a video
 
-Add `Membrane.FFmpeg.SWScale.Converter` to the pipeline above and the set the video width to 640 pixels. [Documentation](https://hexdocs.pm/membrane_ffmpeg_swscale_plugin/Membrane.FFmpeg.SWScale.Converter.html) will be helpful.
+Add `Membrane.FFmpeg.SWScale.Converter` to the pipeline above and set the video width to 640 pixels. [Documentation](https://hexdocs.pm/membrane_ffmpeg_swscale_plugin/Membrane.FFmpeg.SWScale.Converter.html) might be helpful.
 
-How long did pipeline work before adding an element reducing the video size? What is the reason of this change?
+> How long did the pipeline work before adding an element reducing the video size? What is the reason of this change?
 
 ## Exercise A2: Add sound
 
-`priv/fixtures/bunny_without_sound.mp4` is a MP4 container having only one video track. `priv/fixtures/bunny_with_sound.mp4` is a MP4 container having two tracks: one audio and one video.
+`priv/fixtures/bunny_without_sound.mp4` is an MP4 container having only one video track. `priv/fixtures/bunny_with_sound.mp4` is an MP4 container having two tracks: one audio and one video.
 
 Modify the pipeline in the following way:
 
 * as a source file use `priv/a2/bunny_with_sound.mp4` instead of `priv/a1/bunny_without_sound.mp4`
 * save the output of your pipeline in `priv/outputs/bunny_with_sound.mkv`
-* modify the spec returned from `handle_init/2` to support also an audio track, so that the output file contains the audio from the source file.
+* modify the children specification returned from the `handle_init/2` callback to support audio track as well, so that the output file contains the audio from the source file.
 
 ## Exercise A3*: Revert colors
 
-Write your own element reverting colors and add it to the pipeline. Adding `Membrane.FFmpeg.SWScale.Converter` before and after your custom filter might be helpful. Use an element template below:
+Write your own element reverting colors and add it to the pipeline. Adding `Membrane.FFmpeg.SWScale.Converter` before and after your custom filter might be helpful. Use the element template below:
 
 ```elixir
 defmodule ColorReverter do
@@ -160,7 +160,7 @@ defmodule ColorRevertingPipeline do
   def handle_element_end_of_stream(_element, _input, _ctx, state), do: {[], state}
 end
 ```
-
+Now run the pipeline:
 ```elixir
 {:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(ColorRevertingPipeline)
 ref = Process.monitor(supervisor)

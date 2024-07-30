@@ -1,12 +1,12 @@
 # Membrane - workshops
 
 Prerequisites:
-- Linux or Mac OS (if Windows is your only option, you'll need a VM for the Membrane part, preferably with Ubuntu 22.04)
+- Linux or MacOS (if Windows is your only option, you'll need a VM for the Membrane part, preferably with Ubuntu 22.04)
 - Elixir - https://elixir-lang.org/install.html
 - Livebook - Mac: https://livebook.dev/#install, Linux: https://github.com/livebook-dev/livebook#direct-installation-with-elixir
 
-To run metrics
- - get node identifier of your currently running livebook
+To run livebook with Membrane internal metrics visualization:
+ - get node identifier of the livebook in which you run your pipeline
  - paste it into the code of Livebook Metrics placed in `livebooks/metrics.livemd`
  ## Copyright and License
 
