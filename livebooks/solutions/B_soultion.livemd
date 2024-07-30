@@ -28,7 +28,66 @@ Mix.install([
 ])
 ```
 
-## Exercise B1
+## Exercise B1 (solution with Axon)
+
+```elixir
+defmodule StyleTransferFilter do
+  use Membrane.Filter
+
+  def_input_pad(:input,
+    accepted_format: %Membrane.RawVideo{pixel_format: :RGB}
+  )
+
+  def_output_pad(:output,
+    accepted_format: %Membrane.RawVideo{pixel_format: :RGB}
+  )
+
+  @impl true
+  def handle_init(_ctx, _opts), do: {[], %{model: nil, loaded_params: nil}}
+
+  @impl true
+  def handle_stream_format(:input, format, _ctx, state) do
+    model = Workshop.Models.Candy.model(format.height, format.width)
+
+    loaded_params =
+      "./priv/candy.nx"
+      |> File.read!()
+      |> Nx.deserialize()
+
+    {[stream_format: {:output, format}], %{state | model: model, loaded_params: loaded_params}}
+  end
+
+  @impl true
+  def handle_buffer(:input, buffer, ctx, state) do
+    input_tensor = preprocess(buffer.payload, ctx.pads.input.stream_format)
+    output_tensor = Axon.predict(state.model, state.loaded_params, %{"data" => input_tensor})
+
+    output_payload = postprocess(output_tensor, ctx.pads.input.stream_format)
+    buffer = %{buffer | payload: output_payload}
+
+    {[buffer: {:output, buffer}], state}
+  end
+
+  defp preprocess(payload, format) do
+    payload
+    |> Nx.from_binary(:u8, backend: EXLA.Backend)
+    |> Nx.as_type(:f32)
+    |> Nx.reshape({1, format.height, format.width, 3})
+  end
+
+  defp postprocess(tensor, input_stream_format, model_module) do
+    tensor
+    |> Nx.backend_transfer(EXLA.Backend)
+    |> Workshop.Models.Candy.postprocess_rescale()
+    |> Nx.reshape({3, input_stream_format.height, input_stream_format.width})
+    |> Nx.round()
+    |> Nx.as_type(:u8)
+    |> Nx.to_binary()
+  end
+end
+```
+
+## Exercise B1 (solution with Ortex)
 
 ```elixir
 defmodule StyleTransferFilter do
@@ -103,16 +162,15 @@ Add `|> via_in(:input, auto_demand_size: 5)` before `|> child(:style_transfer, .
 ```
 @impl true
 def handle_init(_ctx, _opts) do
-  actions = [start_timer: {:my_timer, Membrane.Time.milliseconds(1500)}]
   state = %{models: nil, current_model: nil}
-  {actions, state}
+  {[], state}
 end
 
 @impl true
 def handle_setup(_ctx, state) do
-  directory_path = "~/membrane/elixir_conf_us_2024_workshop/priv/b" |> Path.expand()
-  
-  models = 
+  directory_path = Path.join(__DIR__, "../../priv/models")
+
+  models =
     File.ls!(directory_path)
     |> Enum.map(fn model_filename ->
       Path.join(directory_path, model_filename)
@@ -121,7 +179,9 @@ def handle_setup(_ctx, state) do
 
   current_model = Enum.random(models)
 
-  {[], %{state | models: models, current_model: current_model}}
+  actions = [start_timer: {:my_timer, Membrane.Time.milliseconds(1500)}]
+  state = %{state | models: models, current_model: current_model}
+  {actions, state}
 end
 
 @impl true

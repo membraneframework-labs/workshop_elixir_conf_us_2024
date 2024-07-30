@@ -57,12 +57,12 @@ candy.nx
 mosaic.nx
 ```
 
-Both models expect `t:Nx.tensor()` that represents an image as an input. The tensor's shape should be `{batch_size, colors, height, width}`, where:
+Both models expect `t:Nx.tensor()` that represents an image. Tensor shape should be `{batch_size, height, width, colors}`, where:
 
 * `batch_size` - number of images passed to the model at once (for us, it might be always equal `1`)
-* `height` - image height (in other words, raw video frame height)
+* `hegith` - image height (in other words, raw video frame height)
 * `width` - image width (in other words, raw video frame width)
-* `colors` - always equals `3`, since in `RGB` each pixel is described by three numbers, one for each color
+* `colors` - always equal `3`, since in `RGB` each pixel is described by three numbers, for each color
 
 ## ONNX models
 
@@ -80,26 +80,24 @@ udnie.onnx
 vangogh.onnx
 ```
 
-Each model expects `t:Nx.tensor()` that represents an image as an input. The tensor's shape should be `{batch_size, colors, height, width}`.
+Each model expects `t:Nx.tensor()` that represents an image. Tensor shape should be `{batch_size, colors, height, width}`.
 
 <b>
 Notice!
 </b>
-Order of the axes is slightly different than in Axon models.
 
 ## Exercise B1: Write Style Transfer Element
 
-Write your own `StyleTransferFilter`, that will use one of the models above, to apply style transfer on video clip presenting [Big Buck Bunny](https://en.wikipedia.org/wiki/Big_Buck_Bunny).
+Write your own `StyleTransferFilter`, that will use one of the models above, to put style tranfer on our video clip with Big Buck Bunny.
 
-Then, add your element to the `StyleTransferPipeline` which is already prepared in a code snippet below this exercise.
+Then, add your element to the `StyleTransferPipeline` below this exercise.
 
-<<<<<<< HEAD
 You can use `Axon` or `Ortex`.
 
 There are some tips, that will be helpfull:
 
-* raw video frames returned by `SWScale.Converter{format: :RGB}` has arrangement `Height x Width x Colors`. The number representing a particular color of one pixel takes 1 byte and doesn't have a sign.
-* `stream_format` received in `handle_stream_format/4` contains information about input video width and height.
+* raw video frames returned by `SWScale.Converter{format: :RGB}` have arrangement `H x W x colors`. Number representing one color of one pixel will take 1 byte and won't have a sign.
+* `stream_format` received in `handle_stream_format/4` contains informations about input video width and height
 * `t:Nx.tensor()` returned by a model needs to be clamped to the range between 0 and 255
 * always set the `t:Nx.tensor()` backend to `EXLA.Backend`, otherwise operations on tensors will be slow (take a look at `Nx.backend_transfer/2` function and `:backend` option in `Nx.from_binary/3`)
 
@@ -108,21 +106,21 @@ There are some tips, that will be helpfull:
 * to get a model, call `model/2` function from a specific module.
 * to load weights, read conent of one of the `*.nx` files and deserialize it to `Nx.tensor()`.
 * to run a model, execute `Axon.predict/3`. This function expects `Axon` model, model weights and a map having input data under the `"data"` key.
-```elixir
-Axon.predict(model, weights, %{"data" => preprocessed_image_tensor})
-```
+  ```elixir
+  Axon.predict(model, weights, %{"data" => preprocessed_image_tensor})
+  ```
 
 ### If you decide to use Ortex
 
 * to use a specific model, we have to load it first, using `Ortex.load/1` function ([Ortex docs](https://hexdocs.pm/ortex/Ortex.html)).
-* our models expect two input tensors: one representing an image, and the second one specifying parameters used in layers inside the models. The code snippet below illustrates, how to run a model with these two inputs. You can always run the model with the same parameters, as shown in the example.
-```elixir
-{output_tensor} = 
+* our models expect two input tensors: one representing image, second one specifying parameters used in layers inside the models. Code snippet below illustrates, how to run a model with these two inputs. You can always run the model with the same parameters as in the example.
+  ```elixir
+  {output_tensor} = 
   Ortex.run(loaded_model, {
     preprocessed_image_tensor, 
     Nx.tensor([1.0, 1.0, 1.0, 1.0], type: :f32)
   })
-```
+  ```
 
 ```elixir
 defmodule StyleTransferFilter do
@@ -188,7 +186,7 @@ defmodule StyleTransferPipeline do
   def handle_element_end_of_stream(_element, _input, _ctx, state), do: {[], state}
 end
 ```
-When the element is ready, you can run the pipeline within the following code snippet:
+
 ```elixir
 {:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(StyleTransferPipeline)
 ref = Process.monitor(supervisor)
@@ -206,7 +204,7 @@ Which approach to this problem is the simplest to implement? Is it the most effi
 
 ## Exercise B3: Rotate styles
 
-Now, let's introduce the following changes to your StyleTransferFilter:
+Now, let's introduce following changes to your StyleTransferFilter:
 
-* load all models in `handle_setup/2`
+* load all models in handle_setup
 * every 1.5 seconds change the used model, so that the style of the output video changes

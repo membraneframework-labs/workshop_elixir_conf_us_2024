@@ -1,6 +1,6 @@
 # Hints
 
-## Untitled
+## Click the label, to unroll the hint
 
 <details>
 <summary><b>Exercise A1</b></summary>
@@ -32,7 +32,41 @@ end
 </details>
 
 <details>
-<summary><b>Exercise B1: first hint</b></summary>
+<summary><b>Exercise B1 (Axon): first hint</b></summary>
+
+
+```elixir
+defp preprocess(buffer, input_stream_format) do
+  buffer.payload
+  |> Nx.from_binary(:u8, backend: EXLA.Backend)
+  |> Nx.as_type(:f32)
+  |> Nx.reshape({1, input_stream_format.height, input_stream_format.width, 3})
+end
+```
+
+</details>
+
+<details>
+<summary><b>Exercise B1 (Axon): second hint</b></summary>
+
+
+```elixir
+defp postprocess(tensor, input_stream_format, model_module) do
+  tensor
+  |> Nx.backend_transfer(EXLA.Backend)
+  |> model_module.postprocess_rescale()
+  |> Nx.reshape({3, input_stream_format.height, input_stream_format.width})
+  |> Nx.round()
+  |> Nx.as_type(:u8)
+  |> Nx.to_binary()
+end
+```
+
+
+</details>
+
+<details>
+<summary><b>Exercise B1 (Ortex): first hint</b></summary>
 
 
 ```elixir
@@ -49,7 +83,7 @@ end
 </details>
 
 <details>
-<summary><b>Exercise B1: second hint</b></summary>
+<summary><b>Exercise B1 (Ortex): second hint</b></summary>
 
 
 ```elixir
@@ -62,6 +96,12 @@ defp postprocess(tensor, input_stream_format) do
   |> Nx.round()
   |> Nx.as_type(:u8)
   |> Nx.to_binary()
+end
+
+defp clamp(tensor) do
+  tensor
+  |> Nx.max(0)
+  |> Nx.min(255)
 end
 ```
 
