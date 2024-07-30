@@ -10,7 +10,7 @@ defmodule Workshop.Models.Candy do
     )
   end
 
-  @spec postprocess_rescale(Nx.tensor()) :: Nx.tensor()
+  @spec postprocess_rescale(Nx.Tensor.t()) :: Nx.Tensor.t()
   def postprocess_rescale(tensor) do
     standard_deviation = Nx.variance(tensor) |> Nx.to_number() |> :math.sqrt()
     scale = 46.4 * standard_deviation
