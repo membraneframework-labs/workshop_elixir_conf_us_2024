@@ -1,5 +1,7 @@
 defmodule Workshop.Models.Mosaic do
-  @moduledoc false
+  @moduledoc """
+  Simplifies the use of the `mosaic` model.
+  """
 
   @spec model(non_neg_integer(), non_neg_integer()) :: any()
   def model(input_height, input_width) do

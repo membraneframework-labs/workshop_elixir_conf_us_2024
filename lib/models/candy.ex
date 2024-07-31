@@ -1,5 +1,7 @@
 defmodule Workshop.Models.Candy do
-  @moduledoc false
+  @moduledoc """
+  Simplifies the use of the `candy` model.
+  """
 
   @spec model(non_neg_integer(), non_neg_integer()) :: any()
   def model(input_height, input_width) do
