@@ -22,7 +22,7 @@ case Membrane.Pipeline.list_pipelines(node) do
     KinoMembrane.pipeline_dashboard(pipeline)
 
   [pipeline | _tail] = pipelines ->
-    IO.warn("There is more than one (#{length(pipelines)}) pipeline on the node #{inspect(node)}")
+    IO.warn("There is more than one (#{length(pipelines)}) pipeline on the node #{inspect(node)}. Showing dashboard for the first one found.")
 
     KinoMembrane.pipeline_dashboard(pipeline)
 
