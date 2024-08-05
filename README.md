@@ -4,12 +4,16 @@ Prerequisites:
 - Linux or MacOS (if Windows is your only option, you'll need a VM for the Membrane part, preferably with Ubuntu 22.04)
 - Elixir - https://elixir-lang.org/install.html
 - Livebook - Mac: https://livebook.dev/#install, Linux: https://github.com/livebook-dev/livebook#direct-installation-with-elixir
+- Rust - https://rustup.rs/
 - `pkg-config`
 - `ffmpeg`
+
+Exercises are in in `livebooks/exercises/` directory. Solutions to some of them can be found in `livebooks/soultions/`. Hints and links to the documentation or guide can be found in `livebooks/hints.livemd`.
 
 To run livebook with Membrane internal metrics visualization:
  - get node identifier of the livebook in which you run your pipeline
  - paste it into the code of Livebook Metrics placed in `livebooks/metrics.livemd`
+
  ## Copyright and License
 
 Copyright 2024, [Software Mansion](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane_template_plugin)
