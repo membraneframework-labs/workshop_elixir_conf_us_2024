@@ -31,7 +31,7 @@ Mix.install([
 
 ## Get node
 
-Value returned by `Node.self()` can be used to get the metrics from the running pipelines
+Value returned by `Node.self()` can be used to get the metrics from the running pipelines. See `metrics.livemd` for more details.
 
 ```elixir
 Node.self()
