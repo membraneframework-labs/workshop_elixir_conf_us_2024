@@ -4,6 +4,8 @@ Prerequisites:
 - Linux or MacOS (if Windows is your only option, you'll need a VM for the Membrane part, preferably with Ubuntu 22.04)
 - Elixir - https://elixir-lang.org/install.html
 - Livebook - Mac: https://livebook.dev/#install, Linux: https://github.com/livebook-dev/livebook#direct-installation-with-elixir
+- `pkg-config`
+- `ffmpeg`
 
 To run livebook with Membrane internal metrics visualization:
  - get node identifier of the livebook in which you run your pipeline

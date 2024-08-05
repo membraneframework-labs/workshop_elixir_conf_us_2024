@@ -2,7 +2,7 @@
 
 ```elixir
 Mix.install([
-  :kino_membrane
+  {:kino_membrane, path: Path.expand("~/membrane/kino_membrane")}
 ])
 ```
 
@@ -11,7 +11,7 @@ Mix.install([
 Set to the variable below the value that you get from the `Get node` section in the livebook with exercises.
 
 ```elixir
-node = :"2q7kylkj-livebook_app@MacBook-Pro-18"
+node = :"on6isklb-livebook_app@MacBook-Pro-18"
 ```
 
 ## Run
