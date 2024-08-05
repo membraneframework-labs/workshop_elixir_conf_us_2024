@@ -9,7 +9,7 @@ Mix.install([
 ])
 ```
 
-## Exercise B1 (solution with Axon)
+## Exercise B1
 
 ```elixir
 defmodule StyleTransferFilter do
@@ -68,7 +68,7 @@ defmodule StyleTransferFilter do
 end
 ```
 
-## Exercise B1 (solution with Ortex)
+## Exercise B2
 
 ```elixir
 defmodule StyleTransferFilter do
@@ -138,39 +138,9 @@ end
 
 `handle_init/2`, `handle_setup/2` and `handle_tick/3` should have implementations as follows. `handle_buffer/4` should remain unchanged.
 
-Add `|> via_in(:input, auto_demand_size: 5)` before `|> child(:style_transfer, ...)` in the spec returned in pipeline, to avoid having processing data chunks in `StyleTransferFilter`
+Add `|> via_in(:input, auto_demand_size: 5)` before `|> child(:style_transfer, ...)` in the spec returned in pipeline, to avoid processing data chunks in `StyleTransferFilter`.
 
-```
-@impl true
-def handle_init(_ctx, _opts) do
-  state = %{models: nil, current_model: nil}
-  {[], state}
-end
-
-@impl true
-def handle_setup(_ctx, state) do
-  directory_path = Path.join(__DIR__, "../../priv/models")
-
-  models =
-    File.ls!(directory_path)
-    |> Enum.map(fn model_filename ->
-      Path.join(directory_path, model_filename)
-      |> Ortex.load()
-    end)
-
-  current_model = Enum.random(models)
-
-  actions = [start_timer: {:my_timer, Membrane.Time.milliseconds(1500)}]
-  state = %{state | models: models, current_model: current_model}
-  {actions, state}
-end
-
-@impl true
-def handle_tick(:timer, _ctx, state) do
-  current_model = Enum.random(state.models)
-  {[], %{state | current_model: current_model}}
-end
-```
+If you have working soulution of Exercise B2, you can copy-paste there `handle_init/2`, `handle_setup/2` and `handle_tick/3` from the solution below.
 
 ```elixir
 defmodule StyleTransferFilter do
