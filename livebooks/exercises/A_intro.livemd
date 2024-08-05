@@ -95,7 +95,7 @@ Add `Membrane.FFmpeg.SWScale.Converter` to the pipeline above and set the video 
 
 ## Exercise A2: Add sound
 
-`priv/fixtures/bunny_without_sound.mp4` is an MP4 container having only one video track. `priv/fixtures/bunny_with_sound.mp4` is an MP4 container having two tracks: one audio and one video.
+`priv/fixtures/bunny_without_sound.mp4` is an MP4 file having only one video track. `priv/fixtures/bunny_with_sound.mp4` is an MP4 file having two tracks: one audio and one video.
 
 Modify the pipeline in the following way:
 
