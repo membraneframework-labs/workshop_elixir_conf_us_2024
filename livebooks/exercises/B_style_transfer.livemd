@@ -3,35 +3,17 @@
 ```elixir
 Logger.configure(level: :info)
 
+# All necessary dependencies are installed by installing the package below
 Mix.install([
-  :membrane_core,
-  {:workshop_elixir_conf_us_2024, path: Path.join(__DIR__, "../..")},
-  {:membrane_vpx_plugin, "~> 0.1.1"},
-  {:membrane_webrtc_plugin, "~> 0.19.0"},
-  {:membrane_camera_capture_plugin, "~> 0.7.2"},
-  {:membrane_h264_ffmpeg_plugin, "~> 0.31.6"},
-  {:membrane_h26x_plugin, "~> 0.10.2"},
-  {:membrane_sdl_plugin, "~> 0.18.2"},
-  {:membrane_mp4_plugin, "~> 0.35.1"},
-  {:membrane_file_plugin, "~> 0.17.0"},
-  {:membrane_matroska_plugin, "~> 0.6.0"},
-  {:membrane_ffmpeg_swscale_plugin, "~> 0.16.1"},
-  :membrane_realtimer_plugin,
-  {:kino, "~> 0.13.1"},
-  :membrane_opus_plugin,
-  {:membrane_raw_video_format, "~> 0.4.0", override: true},
-  {:membrane_vp8_format, "~> 0.5.0", override: true},
-  {:membrane_vp9_format, "~> 0.5.0", override: true},
-  {:unifex, "~> 1.2", override: true},
-  {:nx, "~> 0.7.0"},
-  {:exla, "~> 0.7.0"},
-  {:ortex, "~> 0.1.9"}
+  {:workshop_elixir_conf_us_2024, path: Path.join(__DIR__, "../..")}
 ])
 ```
 
 ## Get node
 
-Value returned by `Node.self()` can be used to get the metrics from the running pipelines. See `metrics.livemd` for more details.
+Value returned by `Node.self()` can be used to get the metrics from the running pipelines.
+
+Go to `livebooks/metrics.livemd` go visualize them.
 
 ```elixir
 Node.self()
@@ -61,62 +43,28 @@ Both models expect `t:Nx.tensor()` that represents an image. Tensor shape should
 * `width` - image width (in other words, raw video frame width)
 * `colors` - always equal `3`, since in `RGB` each pixel is described by three numbers, for each color
 
-## ONNX models
-
-In `priv/models` directory we have a few models in `.onnx` format. Each of them does specyfic style tranfer of the input data.
-
-```bash
-$ ls priv/models
-candy.onnx		
-kaganawa.onnx		
-mosaic.onnx		
-mosaic_mobile.onnx	
-picasso.onnx		
-princess.onnx		
-udnie.onnx		
-vangogh.onnx
-```
-
-Each model expects `t:Nx.tensor()` that represents an image. Tensor shape should be `{batch_size, colors, height, width}`.
-
-<b>
-Notice!
-</b>
-
 ## Exercise B1: Write Style Transfer Element
 
 Write your own `StyleTransferFilter`, that will use one of the models above, to put style tranfer on our video clip with Big Buck Bunny.
 
 Then, add your element to the `StyleTransferPipeline` below this exercise.
 
-You can use `Axon` or `Ortex`.
+Use `Axon` library.
 
-There are some tips, that will be helpfull:
+There are some general tips, that will be helpfull:
 
 * raw video frames returned by `SWScale.Converter{format: :RGB}` have arrangement `H x W x colors`. Number representing one color of one pixel will take 1 byte and won't have a sign.
 * `stream_format` received in `handle_stream_format/4` contains informations about input video width and height
 * `t:Nx.tensor()` returned by a model needs to be clamped to the range between 0 and 255
 * always set the `t:Nx.tensor()` backend to `EXLA.Backend`, otherwise operations on tensors will be slow (take a look at `Nx.backend_transfer/2` function and `:backend` option in `Nx.from_binary/3`)
 
-### If you decide to use Axon
+And tips about using `Axon`:
 
 * to get a model, call `model/2` function from a specific module.
 * to load weights, read conent of one of the `*.nx` files and deserialize it to `Nx.tensor()`.
 * to run a model, execute `Axon.predict/3`. This function expects `Axon` model, model weights and a map having input data under the `"data"` key.
   ```elixir
-      Axon.predict(model, weights, %{"data" => preprocessed_image_tensor})
-  ```
-
-### If you decide to use Ortex
-
-* to use a specific model, we have to load it first, using `Ortex.load/1` function ([Ortex docs](https://hexdocs.pm/ortex/Ortex.html)).
-* our models expect two input tensors: one representing image, second one specifying parameters used in layers inside the models. Code snippet below illustrates, how to run a model with these two inputs. You can always run the model with the same parameters as in the example.
-  ```elixir
-      {output_tensor} = 
-      Ortex.run(loaded_model, {
-        preprocessed_image_tensor, 
-        Nx.tensor([1.0, 1.0, 1.0, 1.0], type: :f32)
-      })
+  Axon.predict(model, weights, %{"data" => preprocessed_image_tensor})
   ```
 
 ```elixir
@@ -198,13 +146,53 @@ Kino.Download.new(fn -> File.read!("#{__DIR__}/../../priv/outputs/style_transfer
 )
 ```
 
-## Exercise B2: Compose models
+## ONNX models
+
+In `priv/models` directory we have a few models in `.onnx` format. Each of them does specyfic style tranfer of the input data.
+
+```bash
+$ ls priv/models
+candy.onnx		
+kaganawa.onnx		
+mosaic.onnx		
+mosaic_mobile.onnx	
+picasso.onnx		
+princess.onnx		
+udnie.onnx		
+vangogh.onnx
+```
+
+Each model expects `t:Nx.tensor()` that represents an image. Tensor shape should be `{batch_size, colors, height, width}`.
+
+<b>
+Notice!
+</b>
+
+The order of the axes here is slightly different than order of the axes expected by Axon models.
+
+## Exercise B2: Use Ortex
+
+Now, modify your code from `Exercise B1`, so it will use `Ortex` instead of `Axon`.
+
+There are some tips regarding `Ortex`:
+
+* to use a specific model, we have to load it first, using `Ortex.load/1` function ([Ortex docs](https://hexdocs.pm/ortex/Ortex.html)).
+* our models expect two input tensors: one representing image, second one specifying parameters used in layers inside the models. Code snippet below illustrates, how to run a model with these two inputs. You can always run the model with the same parameters as in the example.
+  ```elixir
+  {output_tensor} = 
+  Ortex.run(loaded_model, {
+    preprocessed_image_tensor, 
+    Nx.tensor([1.0, 1.0, 1.0, 1.0], type: :f32)
+  })
+  ```
+
+## Exercise B3: Compose models
 
 Try to compose 2 style transfers. You can do it in any way you want.
 
 Which approach to this problem is the simplest to implement? Is it the most efficient one?
 
-## Exercise B3: Rotate styles
+## Exercise B4: Rotate styles
 
 Now, let's introduce following changes to your StyleTransferFilter:
 
