@@ -23,9 +23,7 @@ Node.self()
 
 The pipeline below gets the audio and video from the browser and resends it back.
 
-<b>
-Notice:
-</b>
+If you use remote machine instead of your local one, change port numbers in the example below from `8829` on `8929` and from `8831` on `8931`.
 
 ```elixir
 defmodule WebRTCPipeline do
@@ -73,9 +71,7 @@ end
 
 Run both cells below and enter `http://localhost:8000/index.html` url using your browser.
 
-<b>
-Notice:
-</b>
+If you use remote machine instead of your local one, enter the domain name.
 
 ```elixir
 {:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(WebRTCPipeline, [])
