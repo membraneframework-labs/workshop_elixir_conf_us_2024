@@ -3,33 +3,13 @@
 ```elixir
 Logger.configure(level: :info)
 
+# All necessary dependencies are installed by installing the package below
 Mix.install([
-  :membrane_core,
-  {:workshop_elixir_conf_us_2024, path: Path.join(__DIR__, "../..")},
-  {:membrane_vpx_plugin, "~> 0.1.1"},
-  {:membrane_webrtc_plugin, "~> 0.19.0"},
-  {:membrane_camera_capture_plugin, "~> 0.7.2"},
-  {:membrane_h264_ffmpeg_plugin, "~> 0.31.6"},
-  {:membrane_h26x_plugin, "~> 0.10.2"},
-  {:membrane_sdl_plugin, "~> 0.18.2"},
-  {:membrane_mp4_plugin, "~> 0.35.1"},
-  {:membrane_file_plugin, "~> 0.17.0"},
-  {:membrane_matroska_plugin, "~> 0.6.0"},
-  {:membrane_ffmpeg_swscale_plugin, "~> 0.16.1"},
-  :membrane_realtimer_plugin,
-  {:kino, "~> 0.13.1"},
-  :membrane_opus_plugin,
-  {:membrane_raw_video_format, "~> 0.4.0", override: true},
-  {:membrane_vp8_format, "~> 0.5.0", override: true},
-  {:membrane_vp9_format, "~> 0.5.0", override: true},
-  {:unifex, "~> 1.2", override: true},
-  {:nx, "~> 0.7.0"},
-  {:exla, "~> 0.7.0"},
-  {:ortex, "~> 0.1.9"}
+  {:workshop_elixir_conf_us_2024, path: Path.join(__DIR__, "../..")}
 ])
 ```
 
-## Exercise B1 (solution with Axon)
+## Exercise B1
 
 ```elixir
 defmodule StyleTransferFilter do
@@ -88,7 +68,7 @@ defmodule StyleTransferFilter do
 end
 ```
 
-## Exercise B1 (solution with Ortex)
+## Exercise B2
 
 ```elixir
 defmodule StyleTransferFilter do
@@ -158,39 +138,9 @@ end
 
 `handle_init/2`, `handle_setup/2` and `handle_tick/3` should have implementations as follows. `handle_buffer/4` should remain unchanged.
 
-Add `|> via_in(:input, auto_demand_size: 5)` before `|> child(:style_transfer, ...)` in the spec returned in pipeline, to avoid having processing data chunks in `StyleTransferFilter`
+Add `|> via_in(:input, auto_demand_size: 5)` before `|> child(:style_transfer, ...)` in the spec returned in pipeline, to avoid processing data chunks in `StyleTransferFilter`.
 
-```
-@impl true
-def handle_init(_ctx, _opts) do
-  state = %{models: nil, current_model: nil}
-  {[], state}
-end
-
-@impl true
-def handle_setup(_ctx, state) do
-  directory_path = Path.join(__DIR__, "../../priv/models")
-
-  models =
-    File.ls!(directory_path)
-    |> Enum.map(fn model_filename ->
-      Path.join(directory_path, model_filename)
-      |> Ortex.load()
-    end)
-
-  current_model = Enum.random(models)
-
-  actions = [start_timer: {:my_timer, Membrane.Time.milliseconds(1500)}]
-  state = %{state | models: models, current_model: current_model}
-  {actions, state}
-end
-
-@impl true
-def handle_tick(:timer, _ctx, state) do
-  current_model = Enum.random(state.models)
-  {[], %{state | current_model: current_model}}
-end
-```
+If you have working soulution of Exercise B2, you can copy-paste there `handle_init/2`, `handle_setup/2` and `handle_tick/3` from the solution below.
 
 ```elixir
 defmodule StyleTransferFilter do
