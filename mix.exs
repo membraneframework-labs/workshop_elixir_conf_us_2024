@@ -37,9 +37,8 @@ defmodule Membrane.WorkshopElixirConfUS2024.Mixfile do
 
   defp deps do
     [
-      {:membrane_core, "~> 1.0"},
       {:axon, github: "membraneframework-labs/axon"},
-      {:membrane_core, "~> 1.1.1"},
+      {:membrane_core, "~> 1.1"},
       {:membrane_vpx_plugin, "~> 0.1.1"},
       {:membrane_webrtc_plugin, "~> 0.21.0"},
       {:membrane_h264_ffmpeg_plugin, "~> 0.31.6"},
