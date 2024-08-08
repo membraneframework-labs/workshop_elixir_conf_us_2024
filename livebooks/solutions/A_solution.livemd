@@ -1,0 +1,180 @@
+# Solutions: A
+
+```elixir
+Logger.configure(level: :info)
+
+# All necessary dependencies are installed by installing the package below
+Mix.install([
+  {:workshop_elixir_conf_us_2024, path: Path.join(__DIR__, "../..")}
+])
+```
+
+## Exercise A1
+
+The missing child is `|> child(:converter, %Membrane.FFmpeg.SWScale.Converter{output_width: 640})`. It should be put between `:h264_decoder` and `:vp9_encoder`.
+
+```elixir
+defmodule TransmuxingPipeline do
+  use Membrane.Pipeline
+
+  @impl true
+  def handle_init(_ctx, _options) do
+    priv = "#{__DIR__}/../../priv/" |> Path.expand()
+    mp4_path = Path.join(priv, "fixtures/bunny_without_sound.mp4")
+    mkv_path = Path.join(priv, "outputs/bunny_without_sound.mkv")
+
+    spec = [
+      child(:source, %Membrane.File.Source{location: mp4_path})
+      |> child(:mp4_demuxer, Membrane.MP4.Demuxer.ISOM)
+      |> via_out(:output, options: [kind: :video])
+      |> child(:h264_parser_1, %Membrane.H264.Parser{output_stream_structure: :annexb})
+      |> child(:h264_decoder, Membrane.H264.FFmpeg.Decoder)
+      |> child(:converter, %Membrane.FFmpeg.SWScale.Converter{output_width: 640})
+      |> child(:h264_encoder, %Membrane.H264.FFmpeg.Encoder{preset: :fast})
+      |> child(:h264_parser_2, %Membrane.H264.Parser{output_stream_structure: :avc1})
+      |> child(:matroska_muxer, Membrane.Matroska.Muxer)
+      |> child(:file_sink, %Membrane.File.Sink{location: mkv_path})
+    ]
+
+    {[spec: spec], %{}}
+  end
+
+  @impl true
+  def handle_element_end_of_stream(:file_sink, _input, _ctx, state) do
+    {[terminate: :normal], state}
+  end
+
+  @impl true
+  def handle_element_end_of_stream(_element, _input, _ctx, state), do: {[], state}
+end
+```
+
+## Exercise A2
+
+This spec should be added to spec returned in `handle_init/2`:
+
+```
+get_child(:mp4_demuxer)
+|> via_out(:output, options: [kind: :audio])
+|> get_child(:matroska_muxer)
+```
+
+```elixir
+defmodule TransmuxingPipeline do
+  use Membrane.Pipeline
+
+  @impl true
+  def handle_init(_ctx, _options) do
+    priv = "#{__DIR__}/../../priv/" |> Path.expand()
+    mp4_path = Path.join(priv, "fixtures/bunny_with_sound.mp4")
+    mkv_path = Path.join(priv, "outputs/bunny_with_sound.mkv")
+
+    spec = [
+      child(:source, %Membrane.File.Source{location: mp4_path})
+      |> child(:mp4_demuxer, Membrane.MP4.Demuxer.ISOM)
+      |> via_out(:output, options: [kind: :video])
+      |> child(:h264_parser_1, %Membrane.H264.Parser{output_stream_structure: :annexb})
+      |> child(:h264_decoder, Membrane.H264.FFmpeg.Decoder)
+      |> child(:converter, %Membrane.FFmpeg.SWScale.Converter{output_width: 640})
+      |> child(:h264_encoder, %Membrane.H264.FFmpeg.Encoder{preset: :fast})
+      |> child(:h264_parser_2, %Membrane.H264.Parser{output_stream_structure: :avc1})
+      |> child(:matroska_muxer, Membrane.Matroska.Muxer)
+      |> child(:file_sink, %Membrane.File.Sink{location: mkv_path}),
+      get_child(:mp4_demuxer)
+      |> via_out(:output, options: [kind: :audio])
+      |> get_child(:matroska_muxer)
+    ]
+
+    {[spec: spec], %{}}
+  end
+
+  @impl true
+  def handle_element_end_of_stream(:file_sink, _input, _ctx, state) do
+    {[terminate: :normal], state}
+  end
+
+  @impl true
+  def handle_element_end_of_stream(_element, _input, _ctx, state), do: {[], state}
+end
+```
+
+## Exercise A3
+
+Possible `handle_buffer/4` implementation:
+
+```
+@impl true
+def handle_buffer(:input, buffer, _ctx, state) do
+  payload = for <<byte <- buffer.payload>>, into: <<>>, do: <<255 - byte>>
+  buffer = %{buffer | payload: payload}
+  {[buffer: {:output, buffer}], state}
+end
+```
+
+These children should be put between the decoder and the encoder:
+
+```
+|> child(:rgb_converter, %Membrane.FFmpeg.SWScale.Converter{format: :RGB})
+|> child(:color_reverter, ColorReverter)
+|> child(:yuv_converter, %Membrane.FFmpeg.SWScale.Converter{format: :I420})
+```
+
+These children should be spawned between `:h264_decoder` and `:h264_encoder`.
+
+```elixir
+defmodule ColorReverter do
+  use Membrane.Filter
+  alias Membrane.RawVideo
+
+  def_input_pad(:input, accepted_format: %RawVideo{pixel_format: :RGB})
+  def_output_pad(:output, accepted_format: %RawVideo{pixel_format: :RGB})
+
+  @impl true
+  def handle_buffer(:input, buffer, _ctx, state) do
+    payload = for <<byte <- buffer.payload>>, into: <<>>, do: <<255 - byte>>
+    buffer = %{buffer | payload: payload}
+    {[buffer: {:output, buffer}], state}
+  end
+end
+```
+
+```elixir
+defmodule ColorRevertingPipeline do
+  use Membrane.Pipeline
+
+  @impl true
+  def handle_init(_ctx, _options) do
+    priv = "#{__DIR__}/../../priv/" |> Path.expand()
+    mp4_path = Path.join(priv, "fixtures/bunny_with_sound.mp4")
+    mkv_path = Path.join(priv, "outputs/bunny_with_reverted_colors.mkv")
+
+    spec = [
+      child(:source, %Membrane.File.Source{location: mp4_path})
+      |> child(:mp4_demuxer, Membrane.MP4.Demuxer.ISOM)
+      |> via_out(:output, options: [kind: :video])
+      |> child(:h264_parser_1, %Membrane.H264.Parser{output_stream_structure: :annexb})
+      |> child(:h264_decoder, Membrane.H264.FFmpeg.Decoder)
+      |> child(:rgb_converter, %Membrane.FFmpeg.SWScale.Converter{format: :RGB})
+      |> child(:color_reverter, ColorReverter)
+      |> child(:yuv_converter, %Membrane.FFmpeg.SWScale.Converter{format: :I420})
+      |> child(:h264_encoder, %Membrane.H264.FFmpeg.Encoder{preset: :fast})
+      |> child(:h264_parser_2, %Membrane.H264.Parser{output_stream_structure: :avc1})
+      |> child(:matroska_muxer, Membrane.Matroska.Muxer)
+      |> child(:file_sink, %Membrane.File.Sink{location: mkv_path}),
+      get_child(:mp4_demuxer)
+      |> via_out(:output, options: [kind: :audio])
+      |> get_child(:matroska_muxer)
+    ]
+
+    {[spec: spec], %{}}
+  end
+
+  @impl true
+  def handle_element_end_of_stream(:file_sink, _input, _ctx, state) do
+    {[terminate: :normal], state}
+  end
+
+  @impl true
+  def handle_element_end_of_stream(_element, _input, _ctx, state), do: {[], state}
+end
+```

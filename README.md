@@ -1,34 +1,22 @@
-# Membrane Template Plugin
+# Membrane - workshops
 
-[![Hex.pm](https://img.shields.io/hexpm/v/membrane_template_plugin.svg)](https://hex.pm/packages/membrane_template_plugin)
-[![API Docs](https://img.shields.io/badge/api-docs-yellow.svg?style=flat)](https://hexdocs.pm/membrane_template_plugin)
-[![CircleCI](https://circleci.com/gh/membraneframework/membrane_template_plugin.svg?style=svg)](https://circleci.com/gh/membraneframework/membrane_template_plugin)
+Prerequisites:
+- Linux or MacOS (if Windows is your only option, you'll need a VM for the Membrane part, preferably with Ubuntu 22.04)
+- Elixir - https://elixir-lang.org/install.html
+- Livebook - Mac: https://livebook.dev/#install, Linux: https://github.com/livebook-dev/livebook#direct-installation-with-elixir
+- Rust - https://rustup.rs/
+- `pkg-config`
+- `ffmpeg`
 
-This repository contains a template for new plugins.
+Exercises are in in `livebooks/exercises/` directory. Solutions to some of them can be found in `livebooks/soultions/`. Hints and links to the documentation or guide can be found in `livebooks/hints.livemd`.
 
-Check out different branches for other flavors of this template.
+To run livebook with Membrane internal metrics visualization:
+ - get node identifier of the livebook in which you run your pipeline
+ - paste it into the code of Livebook Metrics placed in `livebooks/metrics.livemd`
 
-It's a part of the [Membrane Framework](https://membrane.stream).
+ ## Copyright and License
 
-## Installation
-
-The package can be installed by adding `membrane_template_plugin` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:membrane_template_plugin, "~> 0.1.0"}
-  ]
-end
-```
-
-## Usage
-
-TODO
-
-## Copyright and License
-
-Copyright 2020, [Software Mansion](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane_template_plugin)
+Copyright 2024, [Software Mansion](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane_template_plugin)
 
 [![Software Mansion](https://logo.swmansion.com/logo?color=white&variant=desktop&width=200&tag=membrane-github)](https://swmansion.com/?utm_source=git&utm_medium=readme&utm_campaign=membrane_template_plugin)
 

@@ -1,0 +1,72 @@
+# Solutions: C
+
+```elixir
+Logger.configure(level: :info)
+
+# All necessary dependencies are installed by installing the package below
+Mix.install([
+  {:workshop_elixir_conf_us_2024, path: Path.join(__DIR__, "../..")}
+])
+```
+
+## Exercise C1
+
+Following children should be spawned between `:webrtc_source` and `:webrtc_sink`
+
+```
+|> child(%Membrane.H264.Parser{output_alignment: :au})
+|> child(Membrane.H264.FFmpeg.Decoder)
+|> child(%Membrane.FFmpeg.SWScale.Converter{format: :RGB, output_width: 320})
+|> child(%Membrane.StyleTransfer{style: :princess})
+|> child(%Membrane.FFmpeg.SWScale.Converter{format: :I420})
+|> child(%Membrane.H264.FFmpeg.Encoder{preset: :ultrafast})
+|> child(%Membrane.H264.Parser{output_alignment: :nalu})
+```
+
+```elixir
+defmodule LiveStyleTransferPipeline do
+  use Membrane.Pipeline
+
+  alias Membrane.WebRTC
+
+  @impl true
+  def handle_init(_ctx, _opts) do
+    spec = [
+      child(:webrtc_source, %WebRTC.Source{
+        signaling: {:websocket, port: 8829},
+        video_codec: :h264
+      })
+      |> via_out(Pad.ref(:output, :video_track), options: [kind: :video])
+      |> child(%Membrane.H264.Parser{output_alignment: :au})
+      |> child(Membrane.H264.FFmpeg.Decoder)
+      |> child(%Membrane.FFmpeg.SWScale.Converter{format: :RGB, output_width: 320})
+      |> child(StyleTransferFilter)
+      |> child(%Membrane.FFmpeg.SWScale.Converter{format: :I420})
+      |> child(%Membrane.H264.FFmpeg.Encoder{preset: :ultrafast})
+      |> child(%Membrane.H264.Parser{output_alignment: :nalu})
+      |> via_in(Pad.ref(:input, :video_track), options: [kind: :video])
+      |> child(:webrtc_sink, %WebRTC.Sink{signaling: {:websocket, port: 8831}, video_codec: :h264}),
+      get_child(:webrtc_source)
+      |> via_out(Pad.ref(:output, :audio_track), options: [kind: :audio])
+      |> child(Membrane.Opus.Parser)
+      |> via_in(Pad.ref(:input, :audio_track), options: [kind: :audio])
+      |> get_child(:webrtc_sink)
+    ]
+
+    {[spec: spec], %{webrtc_sink_pads_with_eos: []}}
+  end
+
+  @impl true
+  def handle_element_end_of_stream(pad, :webrtc_sink, _ctx, state) do
+    state = Map.update!(state, :webrtc_sink_pads_with_eos, &[pad | &1])
+
+    if length(state.webrtc_sink_pads_with_eos) >= 2 do
+      {[terminate: :normal], state}
+    else
+      {[], state}
+    end
+  end
+
+  def handle_element_end_of_stream(_pad, _child, _ctx, state), do: {[], state}
+end
+```
