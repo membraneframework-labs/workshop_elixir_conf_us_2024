@@ -23,7 +23,25 @@ Go to `livebooks/metrics.livemd` go visualize them.
 Node.self()
 ```
 
-## Example
+## Short introduction and example
+
+* `Pipeline` to elixirowy process, który zawiaduje membranowymi `Elementami`, które zajmują się przetwarzaniem danych multimedialnych
+* aby moduł stał sie Pipelinem, trzeba dodać do niego linijke `use Membrane.Pipeline`
+* Pipeline'y mogą implementować membranowe callbacki [tutaj wstaw link do callbackow].
+* Kazdy callback otrzymuje jako argumenty: 
+  * stan pipelineu, ktory mozna modyfikowac (tak jak w GenServerze)
+  * context, ktory jest generowany przez framework i zawiera rozne informacji, np o Elementach
+  * czasami jeszcze inne argumenty, w zaleznosci od callbacku
+* Kazdy callback musi zwrocic dwuelementową tuplę `{actions, state}`, gdzie 
+  * `actions` to lista akcji, które wykona framework [link do akcji]
+  * `state` to (byc moze zmodyfikowany) stan elementu, ktory zostanie przekazany do nastepnego wywolania jakiegos callbacku
+* As we said, `Elements` zajmują się właściwym przetwarzaniem danych
+* Aby modul stal sie Elementem, musi `use Membrane.Element`
+* Tak jak Pipelines, Elementy mogą implementowac [callbacki], które muszą zwracac tuple `{actions, state}`
+* Elementy posiadają output oraz input `pady`.
+* Elementy mozna ze sobą linkować, korzystając z padów: Jezeli jakis element posiada output pad, mozna go połączyc z innym elementem, ktory posiada input pad
+* Elementy wysylają bufory z danymi na swoje output pady za pomocą akcji. Gdy element wysyla bufor na swoj output pad, to zlinkowany z nim element otrzyma ten bufor z odpowiedniego input padu.
+* Elementy mogą posiadać zero, jeden lub wiele input oraz output padow (take a look at the pictures)
 
 Here we have an example of a Membrane pipeline, that transcodes and transmuxes video from MP4 container with video encoded with H264 codec to MKV container with video encoded with VP9 codec.
 
