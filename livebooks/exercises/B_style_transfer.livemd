@@ -26,7 +26,7 @@ We have two public modules in `:workshop_elixir_conf_us_2024` app: `Workshop.Mod
 Each of them defines two functions:
 
 1. `model(image_height, image_width)` which returns Axon model
-2. `postprocess_rescale(tensor)` which rescales approprietaly tensor returned from the Axon model
+2. `postprocess(tensor)` which postprocesses tensor returned from the Axon model
 
 Weights for these two models are stored in `priv/nx` directory.
 
@@ -57,6 +57,7 @@ There are some general tips, that will be helpfull:
 * `stream_format` received in `handle_stream_format/4` contains informations about input video width and height
 * `t:Nx.tensor()` returned by a model needs to be clamped to the range between 0 and 255
 * always set the `t:Nx.tensor()` backend to `EXLA.Backend`, otherwise operations on tensors will be slow (take a look at `Nx.backend_transfer/2` function and `:backend` option in `Nx.from_binary/3`)
+* postprocessing is already implemented in `postprocess/1` function in the module models. You have to implement `StyleTransferFilter.preprocess/1` on your own. Below the cell with the definition of `StyleTransferFilter` there is a cell with the test of preprocessing, that should help you do it.
 
 And tips about using `Axon`:
 
@@ -83,12 +84,42 @@ defmodule StyleTransferFilter do
   def handle_init(_ctx, _opts), do: {[], %{}}
 
   @impl true
-  def handle_setup(_ctx, state) do
-    # setup the element
+  def handle_stream_format(:input, _stream_format, _ctx, state) do
+    # handle the stream_format
     {[], state}
   end
 
   # more callbacks 
+
+  def preprocess(_input_binary, _stream_format) do
+    # ...
+  end
+end
+```
+
+The cell below contains the test for `StyleTransferFilter.preprocess/2`
+
+<!-- livebook:{"continue_on_error":true} -->
+
+```elixir
+stream_format = %{pixel_format: RGB, height: 4, width: 5}
+
+# input_payload is <<0, 1, 2, 3, ..., 58, 59>>
+input_payload = 0..59 |> Enum.to_list() |> to_string()
+
+expected_preprocessed_tensor = Nx.iota({1, 4, 5, 3}, type: :f32, backend: EXLA.Backend)
+
+preprocessed_data = StyleTransferFilter.preprocess(input_payload, stream_format)
+
+if Nx.to_list(preprocessed_data) == Nx.to_list(expected_preprocessed_tensor) do
+  :ok
+else
+  raise """
+  Your preprocess/2 function returned
+  #{inspect(preprocessed_data, limit: :infinity, pretty: true)}
+  while it should return
+  #{inspect(expected_preprocessed_tensor, limit: :infinity, pretty: true)}
+  """
 end
 ```
 
@@ -110,7 +141,7 @@ defmodule StyleTransferPipeline do
       |> child(:rgb_converter, %Membrane.FFmpeg.SWScale.Converter{format: :RGB, output_width: 640})
       |> child(:style_transfer, StyleTransferFilter)
       |> child(:yuv_converter, %Membrane.FFmpeg.SWScale.Converter{format: :I420})
-      |> child(:h264_encoder, %Membrane.H264.FFmpeg.Encoder{preset: :fast})
+      |> child(:h264_encoder, %Membrane.H264.FFmpeg.Encoder{preset: :ultrafast})
       |> child({:h264_parser, 2}, %Membrane.H264.Parser{output_stream_structure: :avc1})
       |> child(:mp4_muxer, Membrane.MP4.Muxer.ISOM)
       |> child(:file_sink, %Membrane.File.Sink{location: output_path}),
@@ -131,6 +162,8 @@ defmodule StyleTransferPipeline do
   def handle_element_end_of_stream(_element, _input, _ctx, state), do: {[], state}
 end
 ```
+
+## Run the pipeline
 
 ```elixir
 {:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(StyleTransferPipeline)
@@ -170,6 +203,8 @@ Notice!
 
 The order of the axes here is slightly different than order of the axes expected by Axon models.
 
+<!-- livebook:{"branch_parent_index":2} -->
+
 ## Exercise B2: Use Ortex
 
 Now, modify your code from `Exercise B1`, so it will use `Ortex` instead of `Axon`.
@@ -185,6 +220,66 @@ There are some tips regarding `Ortex`:
     Nx.tensor([1.0, 1.0, 1.0, 1.0], type: :f32)
   })
   ```
+* data preprocessing here is slightly different than in `B1`, so there are 2 cells with the tests for preprocessing and portprocessing, that should help you implement it.
+
+<!-- livebook:{"continue_on_error":true} -->
+
+```elixir
+# test preprocessing
+
+stream_format = %{pixel_format: RGB, height: 4, width: 5}
+
+# input_payload is <<0, 1, 2, 3, ..., 58, 59>>
+input_payload = 0..59 |> Enum.to_list() |> to_string()
+
+expected_preprocessed_tensor =
+  Nx.iota({1, 4, 5, 3}, type: :f32, backend: EXLA.Backend)
+  |> Nx.transpose(axes: [0, 3, 1, 2])
+
+preprocessed_data = StyleTransferFilter.preprocess(input_payload, stream_format)
+
+if Nx.to_list(preprocessed_data) == Nx.to_list(expected_preprocessed_tensor) do
+  :ok
+else
+  raise """
+  Your preprocess/2 function returned
+  #{inspect(preprocessed_data, limit: :infinity, pretty: true)}
+  while it should return
+  #{inspect(expected_preprocessed_tensor, limit: :infinity, pretty: true)}
+  """
+end
+```
+
+```elixir
+# test postprocessing
+
+stream_format = %{pixel_format: RGB, height: 4, width: 5}
+
+tensor_to_postprocess =
+  -300..290//10
+  |> Enum.to_list()
+  |> Nx.tensor(type: :f32, backend: EXLA.Backend)
+  |> Nx.reshape({4, 5, 3})
+  |> Nx.transpose(axes: [2, 0, 1])
+
+expected_postprocessed_data =
+  <<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200,
+    210, 220, 230, 240, 250, 255, 255, 255, 255>>
+
+postprocessed_data = StyleTransferFilter.postprocess(tensor_to_postprocess, stream_format)
+
+if postprocessed_data == expected_postprocessed_data do
+  :ok
+else
+  raise """
+  Your postprocess/2 function returned
+  #{inspect(postprocessed_data, limit: :infinity, pretty: true)}
+  while it should return
+  #{inspect(expected_postprocessed_data, limit: :infinity, pretty: true)}
+  """
+end
+```
 
 ## Exercise B3: Compose models
 

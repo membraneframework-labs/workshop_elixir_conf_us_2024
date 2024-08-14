@@ -9,6 +9,10 @@ Mix.install([
 ])
 ```
 
+## Setup the Livebook
+
+If you run Livebook locally, get the value of your `PATH` env by running `$ echo $PATH`. Then, go to Livebook `Settings` (from the Livebook home page) and then to `Enviroment variables` and set `PATH` to the value you got from the command line.
+
 ## Get node
 
 Value returned by `Node.self()` can be used to get the metrics from the running pipelines.
@@ -95,11 +99,11 @@ Add `Membrane.FFmpeg.SWScale.Converter` to the pipeline above and set the video 
 
 ## Exercise A2: Add sound
 
-`priv/fixtures/bunny_without_sound.mp4` is an MP4 file having only one video track. `priv/fixtures/bunny_with_sound.mp4` is an MP4 file having two tracks: one audio and one video.
+`priv/fixtures/bunny_without_sound.mp4` is an MP4 container having only one video track. `priv/fixtures/bunny_with_sound.mp4` is an MP4 container having two tracks: one audio and one video.
 
 Modify the pipeline in the following way:
 
-* as a source file use `priv/a2/bunny_with_sound.mp4` instead of `priv/a1/bunny_without_sound.mp4`
+* as a source file use `priv/fixtures/bunny_with_sound.mp4` instead of `priv/fixtures/bunny_without_sound.mp4`
 * save the output of your pipeline in `priv/outputs/bunny_with_sound.mkv`
 * modify the children specification returned from the `handle_init/2` callback to support audio track as well, so that the output file contains the audio from the source file.
 
