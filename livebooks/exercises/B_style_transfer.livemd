@@ -163,6 +163,8 @@ defmodule StyleTransferPipeline do
 end
 ```
 
+<!-- livebook:{"branch_parent_index":0} -->
+
 ## Run the pipeline
 
 ```elixir
