@@ -41,6 +41,7 @@ defmodule WebRTCPipeline do
         video_codec: :h264
       })
       |> via_out(Pad.ref(:output, :video_track), options: [kind: :video])
+      |> child(%Membrane.H264.Parser{output_alignment: :nalu})
       |> via_in(Pad.ref(:input, :video_track), options: [kind: :video])
       |> child(:webrtc_sink, %WebRTC.Sink{
         signaling: {:websocket, port: 8831},
@@ -137,6 +138,7 @@ defmodule LiveStyleTransferPipeline do
         video_codec: :h264
       })
       |> via_out(Pad.ref(:output, :video_track), options: [kind: :video])
+      |> child(%Membrane.H264.Parser{output_alignment: :nalu})
       |> via_in(Pad.ref(:input, :video_track), options: [kind: :video])
       |> child(:webrtc_sink, %WebRTC.Sink{
         signaling: {:websocket, port: 8831},
