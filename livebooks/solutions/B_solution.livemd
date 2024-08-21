@@ -59,11 +59,8 @@ defmodule StyleTransferFilter do
   def postprocess(tensor, input_stream_format) do
     tensor
     |> Nx.backend_transfer(EXLA.Backend)
-    |> Workshop.Models.Mosaic.postprocess()
     |> Nx.reshape({3, input_stream_format.height, input_stream_format.width})
-    |> Nx.round()
-    |> Nx.as_type(:u8)
-    |> Nx.to_binary()
+    |> Workshop.Models.Mosaic.postprocess()
   end
 end
 ```
