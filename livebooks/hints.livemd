@@ -44,8 +44,8 @@ end
 
 
 ```elixir
-defp preprocess(buffer, input_stream_format) do
-  buffer.payload
+def preprocess(buffer_payload, input_stream_format) do
+  buffer_payload
   |> Nx.from_binary(:u8, backend: EXLA.Backend)
   |> Nx.as_type(:f32)
   |> Nx.reshape({1, input_stream_format.height, input_stream_format.width, 3})
@@ -55,30 +55,11 @@ end
 </details>
 
 <details>
-<summary><b>Exercise B1: second hint</b></summary>
-
-
-```elixir
-defp postprocess(tensor, input_stream_format, model_module) do
-  tensor
-  |> Nx.backend_transfer(EXLA.Backend)
-  |> model_module.postprocess_rescale()
-  |> Nx.reshape({3, input_stream_format.height, input_stream_format.width})
-  |> Nx.round()
-  |> Nx.as_type(:u8)
-  |> Nx.to_binary()
-end
-```
-
-
-</details>
-
-<details>
 <summary><b>Exercise B2: first hint</b></summary>
 
 
 ```elixir
-defp preprocess(buffer, input_stream_format) do
+def preprocess(buffer, input_stream_format) do
   buffer.payload
   |> Nx.from_binary(:u8, backend: EXLA.Backend)
   |> Nx.as_type(:f32)
@@ -95,7 +76,7 @@ end
 
 
 ```elixir
-defp postprocess(tensor, input_stream_format) do
+def postprocess(tensor, input_stream_format) do
   tensor
   |> Nx.backend_transfer(EXLA.Backend)
   |> Nx.reshape({3, input_stream_format.height, input_stream_format.width})

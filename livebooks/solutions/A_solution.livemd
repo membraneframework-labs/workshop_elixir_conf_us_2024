@@ -111,15 +111,13 @@ def handle_buffer(:input, buffer, _ctx, state) do
 end
 ```
 
-These children should be put between the decoder and the encoder:
+The following children should be put between the `:h264_decoder` and the `:h264_encoder`:
 
 ```
 |> child(:rgb_converter, %Membrane.FFmpeg.SWScale.Converter{format: :RGB})
 |> child(:color_reverter, ColorReverter)
 |> child(:yuv_converter, %Membrane.FFmpeg.SWScale.Converter{format: :I420})
 ```
-
-These children should be spawned between `:h264_decoder` and `:h264_encoder`.
 
 ```elixir
 defmodule ColorReverter do

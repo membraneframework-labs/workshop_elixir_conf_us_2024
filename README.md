@@ -5,6 +5,7 @@ Prerequisites:
 - Elixir - https://elixir-lang.org/install.html
 - Livebook - Mac: https://livebook.dev/#install, Linux: https://github.com/livebook-dev/livebook#direct-installation-with-elixir
 - Rust - https://rustup.rs/
+- Google Chrome - at least version 127.0
 - `pkg-config`
 - `ffmpeg`
 

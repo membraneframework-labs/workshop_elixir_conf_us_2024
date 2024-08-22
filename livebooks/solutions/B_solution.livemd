@@ -49,21 +49,18 @@ defmodule StyleTransferFilter do
     {[buffer: {:output, buffer}], state}
   end
 
-  defp preprocess(payload, format) do
+  def preprocess(payload, format) do
     payload
     |> Nx.from_binary(:u8, backend: EXLA.Backend)
     |> Nx.as_type(:f32)
     |> Nx.reshape({1, format.height, format.width, 3})
   end
 
-  defp postprocess(tensor, input_stream_format) do
+  def postprocess(tensor, input_stream_format) do
     tensor
     |> Nx.backend_transfer(EXLA.Backend)
-    |> Workshop.Models.Mosaic.postprocess_rescale()
     |> Nx.reshape({3, input_stream_format.height, input_stream_format.width})
-    |> Nx.round()
-    |> Nx.as_type(:u8)
-    |> Nx.to_binary()
+    |> Workshop.Models.Mosaic.postprocess()
   end
 end
 ```
@@ -107,7 +104,7 @@ defmodule StyleTransferFilter do
     {[buffer: {:output, buffer}], state}
   end
 
-  defp preprocess(payload, format) do
+  def preprocess(payload, format) do
     payload
     |> Nx.from_binary(:u8, backend: EXLA.Backend)
     |> Nx.as_type(:f32)
@@ -115,7 +112,7 @@ defmodule StyleTransferFilter do
     |> Nx.transpose(axes: [0, 3, 1, 2])
   end
 
-  defp postprocess(tensor, format) do
+  def postprocess(tensor, format) do
     tensor
     |> Nx.backend_transfer(EXLA.Backend)
     |> Nx.reshape({3, format.height, format.width})
@@ -200,7 +197,7 @@ defmodule StyleTransferFilter do
     {[buffer: {:output, buffer}], state}
   end
 
-  defp preprocess(payload, format) do
+  def preprocess(payload, format) do
     payload
     |> Nx.from_binary(:u8, backend: EXLA.Backend)
     |> Nx.as_type(:f32)
@@ -208,7 +205,7 @@ defmodule StyleTransferFilter do
     |> Nx.transpose(axes: [0, 3, 1, 2])
   end
 
-  defp postprocess(tensor, format) do
+  def postprocess(tensor, format) do
     tensor
     |> Nx.backend_transfer(EXLA.Backend)
     |> Nx.reshape({3, format.height, format.width})
