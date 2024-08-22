@@ -23,9 +23,7 @@ Node.self()
 
 The pipeline below gets the audio and video from the browser and resends it back.
 
-<b>
-Notice:
-</b>
+If you use remote machine instead of your local one, change port numbers in the example below from `8829` on `8929` and from `8831` on `8931`.
 
 ```elixir
 defmodule WebRTCPipeline do
@@ -41,7 +39,6 @@ defmodule WebRTCPipeline do
         video_codec: :h264
       })
       |> via_out(Pad.ref(:output, :video_track), options: [kind: :video])
-      |> child(%Membrane.H264.Parser{output_alignment: :nalu})
       |> via_in(Pad.ref(:input, :video_track), options: [kind: :video])
       |> child(:webrtc_sink, %WebRTC.Sink{
         signaling: {:websocket, port: 8831},
@@ -72,7 +69,7 @@ defmodule WebRTCPipeline do
 end
 ```
 
-Run both cells below and enter [`http://localhost:8000/index.html`](http://localhost:8000/index.html) url using your browser.
+Run both cells below and enter `http://localhost:8000/index.html` url using your browser.
 
 <b>
 Notice:
@@ -103,9 +100,9 @@ end
 
 ## Exercise C1: Style Transfer Live
 
-Use your `StyleTranferFilter` from the previous exercises and put it in the pipeline, to create a pipeline that performs style transfer on live video.
+Use your `StyleTranferFilter` from the previous exercises and put it in the pipeline, to have a pipeline that performs style transfer on live video.
 
-Hint: WebRTC elements expect and return H264 video with `output_alignment: :nalu`, while H264 Decoder and Encoder work on H264 with `output_alignment: :au`. Add `child(%Membrane.H264.Parser{output_alignment: :au})` (or `:nalu`) to the pipeline, to switch between these two types of alignment.
+Hint: Webrtc elements expect and return video in H264 with `output_alignment: :nalu`, while H264 Decoder and Encoder work on H264 with `output_alignment: :au`. Add `child(%Membrane.H264.Parser{output_alignment: :au})` (or `:nalu`) to the pipeline, to switch between these two types of alignment.
 
 ```elixir
 defmodule StyleTransferFilter do
@@ -138,7 +135,6 @@ defmodule LiveStyleTransferPipeline do
         video_codec: :h264
       })
       |> via_out(Pad.ref(:output, :video_track), options: [kind: :video])
-      |> child(%Membrane.H264.Parser{output_alignment: :nalu})
       |> via_in(Pad.ref(:input, :video_track), options: [kind: :video])
       |> child(:webrtc_sink, %WebRTC.Sink{
         signaling: {:websocket, port: 8831},
