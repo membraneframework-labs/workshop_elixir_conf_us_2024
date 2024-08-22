@@ -27,7 +27,7 @@ Node.self()
 
 ## Introduction
 
-Pipeline is an Elixir Process that manages [Membrane](https://hexdocs.pm/membrane_core/readme.html) Elements and handles the processing of multimedia data.
+Pipeline is an Elixir process that manages [Membrane](https://hexdocs.pm/membrane_core/readme.html) Elements so that they cooperate to the process multimedia data.
 
 To make the module a Pipeline, add the line `use Membrane.Pipeline` to it.
 
