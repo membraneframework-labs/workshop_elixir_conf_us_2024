@@ -36,13 +36,13 @@ defmodule WebRTCPipeline do
     spec = [
       child(:webrtc_source, %WebRTC.Source{
         signaling: {:websocket, port: 8829},
-        video_codec: :h264
+        video_codec: :vp8
       })
       |> via_out(Pad.ref(:output, :video_track), options: [kind: :video])
       |> via_in(Pad.ref(:input, :video_track), options: [kind: :video])
       |> child(:webrtc_sink, %WebRTC.Sink{
         signaling: {:websocket, port: 8831},
-        video_codec: :h264
+        video_codec: :vp8
       }),
       get_child(:webrtc_source)
       |> via_out(Pad.ref(:output, :audio_track), options: [kind: :audio])
