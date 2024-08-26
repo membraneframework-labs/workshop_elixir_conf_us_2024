@@ -2,7 +2,7 @@
 
 ```elixir
 Mix.install([
-  {:kino_membrane, path: Path.expand("~/membrane/kino_membrane")}
+  :kino_membrane
 ])
 ```
 
