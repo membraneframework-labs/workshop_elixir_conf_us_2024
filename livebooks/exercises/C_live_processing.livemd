@@ -71,9 +71,7 @@ end
 
 Run both cells below and enter `http://localhost:8000/index.html` url using your browser.
 
-<b>
-Notice:
-</b>
+If you use remote machine, use url of it instead of `localhost:8000`.
 
 ```elixir
 {:ok, supervisor, _pipeline} = Membrane.Pipeline.start_link(WebRTCPipeline, [])
